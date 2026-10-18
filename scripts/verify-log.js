@@ -1,9 +1,11 @@
 #!/usr/bin/env node
-// Standalone verifier: recomputes the hash chain in logs/audit.log from
+// Standalone verifier: recomputes the HMAC hash chain in logs/audit.log from
 // scratch and reports whether it's intact. This is the "Verify Integrity"
-// check — it does not trust the broker, it recomputes everything itself.
+// check — it does not trust the broker, it recomputes everything itself,
+// using the same AUDIT_HMAC_KEY from .env (never shared with red/blue team
+// containers, so only the broker and this script can do this check).
 
-import { createHash } from "node:crypto";
+import { createHmac } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
@@ -12,9 +14,15 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LOG_PATH = process.argv[2] || path.join(__dirname, "..", "logs", "audit.log");
 const GENESIS_HASH = "0".repeat(64);
 
+const HMAC_KEY = process.env.AUDIT_HMAC_KEY;
+if (!HMAC_KEY) {
+  console.error("AUDIT_HMAC_KEY is not set. Run with:\n  export $(grep -v '^#' .env | xargs) && node scripts/verify-log.js");
+  process.exit(1);
+}
+
 function hashEntry(prevHash, seq, ts, event, data) {
   const payload = `${prevHash}|${seq}|${ts}|${event}|${JSON.stringify(data)}`;
-  return createHash("sha256").update(payload).digest("hex");
+  return createHmac("sha256", HMAC_KEY).update(payload).digest("hex");
 }
 
 async function main() {

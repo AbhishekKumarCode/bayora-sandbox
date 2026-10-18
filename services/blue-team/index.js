@@ -2,6 +2,9 @@ import { classify } from "./classifier.js";
 
 const BROKER_URL = process.env.BROKER_URL || "http://broker:4000";
 const POLL_MS = Number(process.env.POLL_INTERVAL_MS || 1500);
+const BLUE_TEAM_TOKEN = process.env.BLUE_TEAM_TOKEN;
+if (!BLUE_TEAM_TOKEN) throw new Error("BLUE_TEAM_TOKEN is required");
+const authHeaders = { authorization: `Bearer ${BLUE_TEAM_TOKEN}` };
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -25,7 +28,7 @@ async function pollLoop() {
 
   while (true) {
     try {
-      const res = await fetch(`${BROKER_URL}/pending`);
+      const res = await fetch(`${BROKER_URL}/pending`, { headers: authHeaders });
       const { item } = await res.json();
 
       if (item) {
@@ -35,7 +38,7 @@ async function pollLoop() {
 
         await fetch(`${BROKER_URL}/score`, {
           method: "POST",
-          headers: { "content-type": "application/json" },
+          headers: { "content-type": "application/json", ...authHeaders },
           body: JSON.stringify({ attackId, verdict, confidence, notes }),
         });
       }

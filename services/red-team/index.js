@@ -2,6 +2,8 @@ import { readFile } from "node:fs/promises";
 
 const BROKER_URL = process.env.BROKER_URL || "http://broker:4000";
 const DELAY_MS = Number(process.env.ATTACK_DELAY_MS || 2000);
+const RED_TEAM_TOKEN = process.env.RED_TEAM_TOKEN;
+if (!RED_TEAM_TOKEN) throw new Error("RED_TEAM_TOKEN is required");
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -31,7 +33,10 @@ async function run() {
     try {
       const res = await fetch(`${BROKER_URL}/submit-attack`, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${RED_TEAM_TOKEN}`,
+        },
         body: JSON.stringify(attack),
       });
       const json = await res.json();

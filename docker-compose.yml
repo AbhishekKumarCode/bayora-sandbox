@@ -6,13 +6,17 @@ services:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - ANTHROPIC_MODEL=${ANTHROPIC_MODEL:-claude-sonnet-5}
       - AUDIT_LOG_PATH=/logs/audit.log
+      - AUDIT_HMAC_KEY=${AUDIT_HMAC_KEY:?set AUDIT_HMAC_KEY in .env}
+      - RED_TEAM_TOKEN=${RED_TEAM_TOKEN:?set RED_TEAM_TOKEN in .env}
+      - BLUE_TEAM_TOKEN=${BLUE_TEAM_TOKEN:?set BLUE_TEAM_TOKEN in .env}
+      - AUDIT_TOKEN=${AUDIT_TOKEN:?set AUDIT_TOKEN in .env}
     volumes:
       - ./logs:/logs
     networks:
       - red-net
       - blue-net
     ports:
-      - "4000:4000" # host-only, for the demo/verify script — not reachable from red or blue containers
+      - "127.0.0.1:4000:4000" # host-only (loopback), for the demo dashboard/verify script — not reachable from outside this machine
     cap_drop:
       - ALL
     security_opt:
@@ -25,6 +29,7 @@ services:
     container_name: bayora-red-team
     environment:
       - BROKER_URL=http://broker:4000
+      - RED_TEAM_TOKEN=${RED_TEAM_TOKEN:?set RED_TEAM_TOKEN in .env} # this container never sees BLUE_TEAM_TOKEN or AUDIT_TOKEN
     networks:
       - red-net # cannot reach blue-team: no shared network
     cap_drop:
@@ -40,6 +45,7 @@ services:
     container_name: bayora-blue-team
     environment:
       - BROKER_URL=http://broker:4000
+      - BLUE_TEAM_TOKEN=${BLUE_TEAM_TOKEN:?set BLUE_TEAM_TOKEN in .env} # this container never sees RED_TEAM_TOKEN or AUDIT_TOKEN
     networks:
       - blue-net # cannot reach red-team: no shared network
     cap_drop:

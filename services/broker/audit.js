@@ -1,15 +1,20 @@
-import { createHash } from "node:crypto";
+import { createHmac } from "node:crypto";
 import { appendFile, readFile, access } from "node:fs/promises";
 
 const LOG_PATH = process.env.AUDIT_LOG_PATH || "/logs/audit.log";
+const HMAC_KEY = process.env.AUDIT_HMAC_KEY;
 const GENESIS_HASH = "0".repeat(64);
+
+if (!HMAC_KEY) {
+  throw new Error("AUDIT_HMAC_KEY is required — refusing to run an unkeyed (forgeable) audit log");
+}
 
 // Single in-process write queue so concurrent appends never race on prevHash.
 let writeQueue = Promise.resolve();
 
 function hashEntry(prevHash, seq, ts, event, data) {
   const payload = `${prevHash}|${seq}|${ts}|${event}|${JSON.stringify(data)}`;
-  return createHash("sha256").update(payload).digest("hex");
+  return createHmac("sha256", HMAC_KEY).update(payload).digest("hex");
 }
 
 async function getLastEntry() {
@@ -49,4 +54,24 @@ export async function readAllEntries() {
     .split("\n")
     .filter(Boolean)
     .map((line) => JSON.parse(line));
+}
+
+// Server-side chain verification — the HMAC key never leaves the broker/host,
+// so this (or verify-log.js on the host) is the only place that can actually
+// recompute and confirm the chain. A browser-side check would have to be
+// given the key, which would defeat the point of keying it at all.
+export async function verifyChain() {
+  const entries = await readAllEntries();
+  let expectedPrev = GENESIS_HASH;
+  for (const entry of entries) {
+    if (entry.prevHash !== expectedPrev) {
+      return { ok: false, brokenAtSeq: entry.seq, reason: "prevHash mismatch" };
+    }
+    const recomputed = hashEntry(entry.prevHash, entry.seq, entry.ts, entry.event, entry.data);
+    if (recomputed !== entry.hash) {
+      return { ok: false, brokenAtSeq: entry.seq, reason: "data was altered" };
+    }
+    expectedPrev = entry.hash;
+  }
+  return { ok: true, count: entries.length, finalHash: expectedPrev };
 }

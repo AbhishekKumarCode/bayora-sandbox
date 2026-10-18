@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bayora Sandbox — Live</title>
+<style>
+  :root {
+    --bg: #0A0E14;
+    --card: #141B24;
+    --card2: #1B232E;
+    --red: #FF4757;
+    --cyan: #00D9FF;
+    --green: #00FF9D;
+    --amber: #FFB020;
+    --white: #F4F1EA;
+    --muted: #8A93A3;
+    --line: #2A3542;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--white);
+    font-family: -apple-system, "Segoe UI", Arial, sans-serif;
+    padding: 28px 36px 60px;
+  }
+  h1 {
+    font-size: 22px;
+    margin: 0 0 2px;
+    letter-spacing: 0.02em;
+  }
+  .sub {
+    color: var(--muted);
+    font-family: "Courier New", monospace;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+  .status-pill {
+    display: inline-block;
+    font-family: "Courier New", monospace;
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    margin-left: 10px;
+  }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .card {
+    background: var(--card);
+    border-radius: 10px;
+    padding: 18px 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+  }
+  .card .label {
+    font-family: "Courier New", monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .card .value {
+    font-size: 34px;
+    font-weight: 700;
+  }
+  .grid2 {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 16px;
+  }
+  .panel {
+    background: var(--card);
+    border-radius: 10px;
+    padding: 18px 20px;
+  }
+  .panel h2 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin: 0 0 14px;
+    font-family: "Courier New", monospace;
+  }
+  .feed-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 13px;
+  }
+  .feed-row:last-child { border-bottom: none; }
+  .ts { color: var(--muted); font-family: "Courier New", monospace; font-size: 11px; width: 76px; flex-shrink: 0; }
+  .badge {
+    font-family: "Courier New", monospace;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+  }
+  .badge.attack_submitted { background: rgba(255,71,87,0.15); color: var(--red); border: 1px solid var(--red); }
+  .badge.llm_response_received { background: rgba(255,255,255,0.08); color: var(--white); border: 1px solid var(--line); }
+  .badge.blue_team_verdict.blocked { background: rgba(0,255,157,0.12); color: var(--green); border: 1px solid var(--green); }
+  .badge.blue_team_verdict.passed_through { background: rgba(255,176,32,0.14); color: var(--amber); border: 1px solid var(--amber); }
+  .badge.blue_team_verdict.ambiguous { background: rgba(138,147,163,0.15); color: var(--muted); border: 1px solid var(--muted); }
+  .detail { color: var(--white); opacity: 0.85; }
+  .boundary { font-family: "Courier New", monospace; font-size: 12px; line-height: 1.9; color: var(--muted); }
+  .boundary b { color: var(--white); }
+  .verify-btn {
+    background: var(--card2);
+    border: 1px solid var(--cyan);
+    color: var(--cyan);
+    font-family: "Courier New", monospace;
+    font-size: 12px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-top: 14px;
+    width: 100%;
+  }
+  .verify-btn:hover { background: rgba(0,217,255,0.08); }
+  .verify-result {
+    margin-top: 10px;
+    font-family: "Courier New", monospace;
+    font-size: 12px;
+    padding: 10px;
+    border-radius: 6px;
+    display: none;
+  }
+  .verify-result.ok { display: block; background: rgba(0,255,157,0.08); color: var(--green); border: 1px solid var(--green); }
+  .verify-result.bad { display: block; background: rgba(255,71,87,0.08); color: var(--red); border: 1px solid var(--red); }
+  .empty { color: var(--muted); font-size: 13px; padding: 20px 0; text-align: center; }
+</style>
+</head>
+<body>
+  <h1>BAYORA SANDBOX<span id="modePill" class="status-pill">loading…</span></h1>
+  <div class="sub">live audit feed — broker at <span id="brokerUrlLabel"></span></div>
+
+  <div class="stats">
+    <div class="card">
+      <div class="label">Attacks Tested</div>
+      <div class="value" id="statAttacks">—</div>
+    </div>
+    <div class="card">
+      <div class="label">Blocked</div>
+      <div class="value" id="statBlocked" style="color:var(--green)">—</div>
+    </div>
+    <div class="card">
+      <div class="label">Passed Through</div>
+      <div class="value" id="statPassed" style="color:var(--amber)">—</div>
+    </div>
+    <div class="card">
+      <div class="label">Block Rate</div>
+      <div class="value" id="statRate" style="color:var(--cyan)">—</div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h2>Activity Log</h2>
+      <div id="feed"><div class="empty">waiting for events…</div></div>
+    </div>
+    <div>
+      <div class="panel" style="margin-bottom:16px;">
+        <h2>Isolation Boundary</h2>
+        <div class="boundary">
+          <div><b style="color:var(--red)">RED TEAM</b> — red-net only</div>
+          <div><b style="color:var(--white)">BROKER</b> — red-net + blue-net (mediator)</div>
+          <div><b style="color:var(--cyan)">BLUE TEAM</b> — blue-net only</div>
+          <div style="margin-top:10px; opacity:0.7;">red ⇄ blue: no shared network<br/>blue team sees response text only — never the prompt</div>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Audit Integrity</h2>
+        <div class="boundary" id="chainSummary">— entries, hash-chained</div>
+        <button class="verify-btn" onclick="verifyChain()">VERIFY INTEGRITY</button>
+        <div class="verify-result" id="verifyResult"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const BROKER_URL = window.BROKER_URL || "http://localhost:4000";
+document.getElementById("brokerUrlLabel").textContent = BROKER_URL;
+
+// This dashboard is the host-only observability surface — same trust level
+// as the broker's /audit endpoint itself. The token lives in this browser's
+// localStorage only; it is never sent to or stored by the red-team/blue-team
+// containers, which don't have it at all.
+function getAuditToken() {
+  let token = localStorage.getItem("bayora_audit_token");
+  if (!token) {
+    token = prompt("Enter AUDIT_TOKEN (from your .env file) to view the dashboard:");
+    if (token) localStorage.setItem("bayora_audit_token", token);
+  }
+  return token;
+}
+function authHeaders() {
+  return { authorization: `Bearer ${getAuditToken()}` };
+}
+
+function fmtTime(ts) {
+  const d = new Date(ts);
+  return d.toLocaleTimeString([], { hour12: false });
+}
+
+function renderFeed(entries) {
+  const feed = document.getElementById("feed");
+  if (entries.length === 0) {
+    feed.innerHTML = '<div class="empty">waiting for events…</div>';
+    return;
+  }
+  const rows = entries.slice().reverse().slice(0, 30).map(e => {
+    let detail = "";
+    let badgeClass = e.event;
+    if (e.event === "attack_submitted") {
+      detail = `technique=<b>${e.data.technique}</b>`;
+    } else if (e.event === "llm_response_received") {
+      detail = (e.data.mock ? "[mock] " : "") + (e.data.responsePreview || "").slice(0, 70);
+    } else if (e.event === "blue_team_verdict") {
+      badgeClass = `blue_team_verdict ${e.data.verdict}`;
+      detail = `verdict=<b>${e.data.verdict}</b> confidence=${e.data.confidence}`;
+    } else if (e.event === "llm_error") {
+      detail = `error: ${e.data.error}`;
+    }
+    return `<div class="feed-row">
+      <span class="ts">${fmtTime(e.ts)}</span>
+      <span class="badge ${badgeClass}">${e.event.replace(/_/g, " ")}</span>
+      <span class="detail">${detail}</span>
+    </div>`;
+  }).join("");
+  feed.innerHTML = rows;
+}
+
+function renderStats(entries) {
+  const attacks = entries.filter(e => e.event === "attack_submitted").length;
+  const verdicts = entries.filter(e => e.event === "blue_team_verdict");
+  const blocked = verdicts.filter(e => e.data.verdict === "blocked").length;
+  const passed = verdicts.filter(e => e.data.verdict === "passed_through").length;
+  const rate = verdicts.length ? Math.round((blocked / verdicts.length) * 100) : 0;
+
+  document.getElementById("statAttacks").textContent = attacks;
+  document.getElementById("statBlocked").textContent = blocked;
+  document.getElementById("statPassed").textContent = passed;
+  document.getElementById("statRate").textContent = verdicts.length ? rate + "%" : "—";
+}
+
+let lastEntries = [];
+
+async function poll() {
+  try {
+    const res = await fetch(`${BROKER_URL}/audit`, { headers: authHeaders() });
+    if (res.status === 403) {
+      localStorage.removeItem("bayora_audit_token"); // bad token — ask again next poll
+      throw new Error("forbidden");
+    }
+    const health = await fetch(`${BROKER_URL}/health`).then(r => r.json());
+    const { count, entries } = await res.json();
+    lastEntries = entries;
+    renderFeed(entries);
+    renderStats(entries);
+    document.getElementById("chainSummary").innerHTML = `${count} entries, HMAC-chained from genesis`;
+    const pill = document.getElementById("modePill");
+    pill.textContent = health.mockMode ? "MOCK MODE" : "LIVE API";
+    pill.style.color = health.mockMode ? "var(--amber)" : "var(--green)";
+    pill.style.borderColor = health.mockMode ? "var(--amber)" : "var(--green)";
+  } catch (err) {
+    document.getElementById("modePill").textContent = "broker unreachable or bad token";
+    document.getElementById("modePill").style.color = "var(--red)";
+  }
+}
+
+async function verifyChain() {
+  const resultEl = document.getElementById("verifyResult");
+  resultEl.className = "verify-result";
+  resultEl.textContent = "verifying…";
+  resultEl.style.display = "block";
+
+  // The HMAC key never reaches the browser, so verification happens
+  // server-side (broker's /verify) — this just displays that result.
+  try {
+    const result = await fetch(`${BROKER_URL}/verify`, { headers: authHeaders() }).then(r => r.json());
+    if (result.ok) {
+      resultEl.className = "verify-result ok";
+      resultEl.textContent = `✓ CHAIN VERIFIED — ${result.count} entries intact (recomputed server-side with the HMAC key)`;
+    } else {
+      resultEl.className = "verify-result bad";
+      resultEl.textContent = `✗ CHAIN BROKEN at seq=${result.brokenAtSeq} — ${result.reason}`;
+    }
+  } catch (err) {
+    resultEl.className = "verify-result bad";
+    resultEl.textContent = `✗ could not reach broker: ${err.message}`;
+  }
+}
+
+poll();
+setInterval(poll, 2000);
+</script>
+</body>
+</html>
