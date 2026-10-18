@@ -1,5 +1,6 @@
 import express from "express";
 import { randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import { appendEntry, readAllEntries, verifyChain } from "./audit.js";
 import { complete, isMockMode } from "./llm.js";
 
@@ -48,12 +49,13 @@ app.get("/health", (req, res) => {
   res.json({ ok: true, mockMode: isMockMode() });
 });
 
-// Called only by the red-team container, authenticated with RED_TEAM_TOKEN.
-app.post("/submit-attack", requireToken(RED_TEAM_TOKEN), async (req, res) => {
-  const { technique, prompt } = req.body || {};
-  if (!prompt) return res.status(400).json({ error: "prompt is required" });
+// Shared by /submit-attack (red-team, one at a time) and /trigger-run
+// (dashboard, fires the whole set) — same logging and queuing behavior
+// either way, so there's exactly one code path that writes attack entries.
+async function runOneAttack(technique, prompt) {
+  if (!prompt) throw Object.assign(new Error("prompt is required"), { status: 400 });
   if (!technique || !TECHNIQUE_PATTERN.test(technique)) {
-    return res.status(400).json({ error: "technique must match ^[a-z0-9_]{1,64}$" });
+    throw Object.assign(new Error("technique must match ^[a-z0-9_]{1,64}$"), { status: 400 });
   }
 
   const attackId = randomUUID();
@@ -64,7 +66,7 @@ app.post("/submit-attack", requireToken(RED_TEAM_TOKEN), async (req, res) => {
     result = await complete(prompt);
   } catch (err) {
     await appendEntry("llm_error", { attackId, error: String(err) });
-    return res.status(502).json({ error: "LLM call failed", detail: String(err) });
+    throw Object.assign(new Error("LLM call failed: " + String(err)), { status: 502 });
   }
 
   await appendEntry("llm_response_received", {
@@ -77,7 +79,49 @@ app.post("/submit-attack", requireToken(RED_TEAM_TOKEN), async (req, res) => {
   attacksById.set(attackId, { technique, prompt, response: result.text });
   pendingForBlueTeam.push({ attackId, response: result.text });
 
-  res.json({ attackId, status: "logged" });
+  return attackId;
+}
+
+// Called only by the red-team container, authenticated with RED_TEAM_TOKEN.
+app.post("/submit-attack", requireToken(RED_TEAM_TOKEN), async (req, res) => {
+  const { technique, prompt } = req.body || {};
+  try {
+    const attackId = await runOneAttack(technique, prompt);
+    res.json({ attackId, status: "logged" });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+});
+
+// Called by the dashboard (AUDIT_TOKEN — this is an operator/demo control,
+// not part of the red/blue isolation boundary itself) to kick off a full
+// demo run on demand, instead of only ever firing once at container boot.
+// Responds immediately; the attacks run in the background so the dashboard
+// can poll /audit and watch them land live.
+let runInProgress = false;
+app.post("/trigger-run", requireToken(AUDIT_TOKEN), async (req, res) => {
+  if (runInProgress) {
+    return res.status(409).json({ error: "a run is already in progress" });
+  }
+  runInProgress = true;
+  res.json({ status: "started" });
+
+  (async () => {
+    try {
+      const raw = await readFile(new URL("./attacks.json", import.meta.url), "utf-8");
+      const attacks = JSON.parse(raw);
+      for (const attack of attacks) {
+        try {
+          await runOneAttack(attack.technique, attack.prompt);
+        } catch (err) {
+          console.error("[trigger-run] attack failed:", err.message);
+        }
+        await new Promise((r) => setTimeout(r, 1200));
+      }
+    } finally {
+      runInProgress = false;
+    }
+  })();
 });
 
 // Called only by the blue-team container, authenticated with BLUE_TEAM_TOKEN.
