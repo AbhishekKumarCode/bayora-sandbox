@@ -1,0 +1,57 @@
+services:
+  broker:
+    build: ./services/broker
+    container_name: bayora-broker
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - ANTHROPIC_MODEL=${ANTHROPIC_MODEL:-claude-sonnet-5}
+      - AUDIT_LOG_PATH=/logs/audit.log
+    volumes:
+      - ./logs:/logs
+    networks:
+      - red-net
+      - blue-net
+    ports:
+      - "4000:4000" # host-only, for the demo/verify script — not reachable from red or blue containers
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: false # needs to write /logs; everything else is read-only via the image layers
+    restart: unless-stopped
+
+  red-team:
+    build: ./services/red-team
+    container_name: bayora-red-team
+    environment:
+      - BROKER_URL=http://broker:4000
+    networks:
+      - red-net # cannot reach blue-team: no shared network
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    depends_on:
+      - broker
+
+  blue-team:
+    build: ./services/blue-team
+    container_name: bayora-blue-team
+    environment:
+      - BROKER_URL=http://broker:4000
+    networks:
+      - blue-net # cannot reach red-team: no shared network
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    depends_on:
+      - broker
+
+networks:
+  red-net:
+    driver: bridge
+  blue-net:
+    driver: bridge
