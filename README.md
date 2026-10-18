@@ -60,17 +60,36 @@ keyword-based classifier, and every step gets appended to `logs/audit.log`.
 
 ## Live dashboard
 
+The real dashboard lives in `web/` — a React + Vite + Tailwind app (see
+`docs/DESIGN_SYSTEM.md` for the visual language) with four pages: Overview,
+Rooms, Notebook, and History. Every number on every page is computed live
+from the broker's real `/audit` data — nothing is hardcoded.
+
 ```bash
-# from the dashboard/ directory, any static file server works, e.g.:
+cd web
+npm install
+cp .env.example .env
+# edit .env: set VITE_AUDIT_TOKEN to the same value as AUDIT_TOKEN in the
+# root .env (optional — if left blank, the app just prompts for it once)
+npm run dev
+```
+
+Open `http://localhost:5173`. Highlights:
+- **Overview** — the Trust Switch (sealed/leaky comparison), live stats, and
+  the activity feed
+- **Notebook** — a "Tamper → Verify" pair: Tamper arms a one-off, in-memory
+  simulation (via the broker's `?simulateTamperSeq=`, which never touches
+  the real log — verified: the log's hash is identical before and after),
+  Verify recomputes the HMAC chain server-side and reports exactly where it
+  breaks, if it does
+
+An older, dependency-free static version still exists at `dashboard/index.html`
+(plain HTML/JS, no build step) if you want something simpler to serve:
+
+```bash
 npx serve dashboard
 # or: python3 -m http.server --directory dashboard 8080
 ```
-
-Open it in a browser — it'll ask for your `AUDIT_TOKEN` once (from `.env`),
-then shows the live attack feed, block-rate stats, the isolation boundary,
-and a "Verify Integrity" button that calls the broker's `/verify` endpoint
-(the HMAC key never leaves the broker, so this is a real server-side
-recomputation, not a client-side display trick).
 
 ## Verifying the audit log from the command line
 
