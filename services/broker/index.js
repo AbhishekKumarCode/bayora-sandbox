@@ -121,7 +121,11 @@ app.get("/audit", requireToken(AUDIT_TOKEN), async (req, res) => {
 });
 
 app.get("/verify", requireToken(AUDIT_TOKEN), async (req, res) => {
-  const result = await verifyChain();
+  // ?simulateTamperSeq=N is a demo-only affordance for the dashboard's
+  // "Tamper" button — it checks what detection would look like if entry N
+  // were altered, entirely in memory. It never writes to the real log.
+  const simulateTamperSeq = req.query.simulateTamperSeq ? Number(req.query.simulateTamperSeq) : undefined;
+  const result = await verifyChain(simulateTamperSeq);
   res.json(result);
 });
 

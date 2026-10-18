@@ -10,6 +10,8 @@ This is the Phase 0 build — the minimal pipe that has to work before anything
 else (full live dashboard polish, stronger container hardening, real
 AdvBench/JailbreakBench sourcing) gets added.
 
+**Docs:** [Product Requirements](docs/PRD.md) · [Architecture](docs/ARCHITECTURE.md) · [API Reference](docs/API.md) · [Threat Model](docs/THREAT_MODEL.md) · [Design System](docs/DESIGN_SYSTEM.md)
+
 ## What's actually isolated here
 
 - `red-team` is only on `red-net`. `blue-team` is only on `blue-net`. They

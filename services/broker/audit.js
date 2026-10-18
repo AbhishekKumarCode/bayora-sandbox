@@ -60,8 +60,21 @@ export async function readAllEntries() {
 // so this (or verify-log.js on the host) is the only place that can actually
 // recompute and confirm the chain. A browser-side check would have to be
 // given the key, which would defeat the point of keying it at all.
-export async function verifyChain() {
+//
+// `simulateTamperSeq` is a demo-only affordance: it mutates the in-memory
+// copy of one entry's data before checking, so the dashboard can show what
+// detection looks like without ever writing a real tamper to disk. The real
+// log file is never touched by this.
+export async function verifyChain(simulateTamperSeq) {
   const entries = await readAllEntries();
+
+  if (simulateTamperSeq != null) {
+    const target = entries.find((e) => e.seq === simulateTamperSeq);
+    if (target) {
+      target.data = { ...target.data, _simulatedTamper: true };
+    }
+  }
+
   let expectedPrev = GENESIS_HASH;
   for (const entry of entries) {
     if (entry.prevHash !== expectedPrev) {
