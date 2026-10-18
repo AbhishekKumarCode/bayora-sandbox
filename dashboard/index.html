@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src http://localhost:4000 http://127.0.0.1:4000" />
 <title>Bayora Sandbox — Live</title>
 <style>
   :root {
@@ -195,13 +196,13 @@ document.getElementById("brokerUrlLabel").textContent = BROKER_URL;
 
 // This dashboard is the host-only observability surface — same trust level
 // as the broker's /audit endpoint itself. The token lives in this browser's
-// localStorage only; it is never sent to or stored by the red-team/blue-team
+// sessionStorage only; it is never sent to or stored by the red-team/blue-team
 // containers, which don't have it at all.
 function getAuditToken() {
-  let token = localStorage.getItem("bayora_audit_token");
+  let token = sessionStorage.getItem("bayora_audit_token");
   if (!token) {
     token = prompt("Enter AUDIT_TOKEN (from your .env file) to view the dashboard:");
-    if (token) localStorage.setItem("bayora_audit_token", token);
+    if (token) sessionStorage.setItem("bayora_audit_token", token);
   }
   return token;
 }
@@ -214,6 +215,21 @@ function fmtTime(ts) {
   return d.toLocaleTimeString([], { hour12: false });
 }
 
+// Attack technique labels and LLM response text are attacker-influenced
+// content by design — this is a tool for viewing adversarial prompts, so it
+// must never render them as HTML. Escape everything before it touches the DOM.
+function escapeHtml(str) {
+  return String(str ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+const KNOWN_EVENTS = new Set(["attack_submitted", "llm_response_received", "blue_team_verdict", "llm_error"]);
+const KNOWN_VERDICTS = new Set(["blocked", "passed_through", "ambiguous"]);
+
 function renderFeed(entries) {
   const feed = document.getElementById("feed");
   if (entries.length === 0) {
@@ -221,21 +237,25 @@ function renderFeed(entries) {
     return;
   }
   const rows = entries.slice().reverse().slice(0, 30).map(e => {
+    const eventName = KNOWN_EVENTS.has(e.event) ? e.event : "unknown_event";
     let detail = "";
-    let badgeClass = e.event;
+    let badgeClass = eventName;
     if (e.event === "attack_submitted") {
-      detail = `technique=<b>${e.data.technique}</b>`;
+      detail = `technique=<b>${escapeHtml(e.data.technique)}</b>`;
     } else if (e.event === "llm_response_received") {
-      detail = (e.data.mock ? "[mock] " : "") + (e.data.responsePreview || "").slice(0, 70);
+      const preview = escapeHtml((e.data.responsePreview || "").slice(0, 70));
+      detail = (e.data.mock ? "[mock] " : "") + preview;
     } else if (e.event === "blue_team_verdict") {
-      badgeClass = `blue_team_verdict ${e.data.verdict}`;
-      detail = `verdict=<b>${e.data.verdict}</b> confidence=${e.data.confidence}`;
+      const verdict = KNOWN_VERDICTS.has(e.data.verdict) ? e.data.verdict : "ambiguous";
+      badgeClass = `blue_team_verdict ${verdict}`;
+      const confidence = Number.isFinite(e.data.confidence) ? e.data.confidence : "?";
+      detail = `verdict=<b>${escapeHtml(verdict)}</b> confidence=${escapeHtml(confidence)}`;
     } else if (e.event === "llm_error") {
-      detail = `error: ${e.data.error}`;
+      detail = `error: ${escapeHtml(e.data.error)}`;
     }
     return `<div class="feed-row">
-      <span class="ts">${fmtTime(e.ts)}</span>
-      <span class="badge ${badgeClass}">${e.event.replace(/_/g, " ")}</span>
+      <span class="ts">${escapeHtml(fmtTime(e.ts))}</span>
+      <span class="badge ${badgeClass}">${escapeHtml(eventName.replace(/_/g, " "))}</span>
       <span class="detail">${detail}</span>
     </div>`;
   }).join("");
@@ -261,7 +281,7 @@ async function poll() {
   try {
     const res = await fetch(`${BROKER_URL}/audit`, { headers: authHeaders() });
     if (res.status === 403) {
-      localStorage.removeItem("bayora_audit_token"); // bad token — ask again next poll
+      sessionStorage.removeItem("bayora_audit_token"); // bad token — ask again next poll
       throw new Error("forbidden");
     }
     const health = await fetch(`${BROKER_URL}/health`).then(r => r.json());

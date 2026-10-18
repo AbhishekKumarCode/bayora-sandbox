@@ -41,6 +41,9 @@ const pendingForBlueTeam = [];
 const attacksById = new Map();
 const issuedToBlueTeam = new Set(); // attackIds blue-team has actually been handed — /score only accepts these, once each
 
+const KNOWN_VERDICTS = new Set(["blocked", "passed_through", "ambiguous"]);
+const TECHNIQUE_PATTERN = /^[a-z0-9_]{1,64}$/; // matches the labels in red-team/attacks.json
+
 app.get("/health", (req, res) => {
   res.json({ ok: true, mockMode: isMockMode() });
 });
@@ -49,6 +52,9 @@ app.get("/health", (req, res) => {
 app.post("/submit-attack", requireToken(RED_TEAM_TOKEN), async (req, res) => {
   const { technique, prompt } = req.body || {};
   if (!prompt) return res.status(400).json({ error: "prompt is required" });
+  if (!technique || !TECHNIQUE_PATTERN.test(technique)) {
+    return res.status(400).json({ error: "technique must match ^[a-z0-9_]{1,64}$" });
+  }
 
   const attackId = randomUUID();
   await appendEntry("attack_submitted", { attackId, technique });
@@ -93,6 +99,9 @@ app.post("/score", requireToken(BLUE_TEAM_TOKEN), async (req, res) => {
   const { attackId, verdict, confidence, notes } = req.body || {};
   if (!attackId || !verdict) {
     return res.status(400).json({ error: "attackId and verdict are required" });
+  }
+  if (!KNOWN_VERDICTS.has(verdict)) {
+    return res.status(400).json({ error: `verdict must be one of: ${[...KNOWN_VERDICTS].join(", ")}` });
   }
   if (!issuedToBlueTeam.has(attackId)) {
     return res.status(409).json({ error: "unknown attackId, or already scored" });
