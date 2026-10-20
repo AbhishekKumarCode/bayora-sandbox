@@ -9,7 +9,7 @@ html {
 body {
   margin: 0;
   overflow-x: hidden;
-  font-family: 'Helvetica Neue ME', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-family: Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
-  background: #1d3045;
+  background: #0B1020;
 }
