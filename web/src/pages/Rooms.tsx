@@ -1,3 +1,4 @@
+import { Target, Bot, ShieldCheck, DoorOpen } from "lucide-react";
 import RoomCard from "../components/RoomCard";
 import { Card, PageHead } from "../components/ui";
 
@@ -20,21 +21,21 @@ export default function Rooms() {
         <h2 className="font-display font-semibold text-sm mb-3">Set up</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <RoomCard
-            emoji="🎯"
+            icon={Target}
             title="Attacker room"
             description="Invents tricky prompts to trip up the model."
             agentLabel="RED_TEAM_TOKEN · set in .env"
             tone="attacker"
           />
           <RoomCard
-            emoji="🤖"
+            icon={Bot}
             title="Model under test"
             description="Answers whatever it's given."
             agentLabel="ANTHROPIC_API_KEY · optional, mock mode otherwise"
             tone="default"
           />
           <RoomCard
-            emoji="🛡️"
+            icon={ShieldCheck}
             title="Defender room"
             description="Judges answers as safe or not. Never sees the question."
             agentLabel="BLUE_TEAM_TOKEN · set in .env"
@@ -44,8 +45,10 @@ export default function Rooms() {
       </div>
 
       <Card>
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-lg">🚪</span>
+        <div className="flex items-center gap-2.5 mb-2">
+          <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-secondary text-foreground">
+            <DoorOpen size={16} strokeWidth={2.25} />
+          </span>
           <h2 className="font-display font-semibold text-sm">The Hallway</h2>
         </div>
         <p className="text-sm text-muted-foreground">

@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from "react";
+import { Target, Bot, ShieldCheck } from "lucide-react";
 import type { AuditEntry } from "../lib/api";
 import { Card } from "./ui";
 
 type Pulse = { id: number; stage: "attacker" | "model" | "defender"; kind?: "caught" | "leak" | "unsure" };
 
-const STAGES: { key: "attacker" | "model" | "defender"; emoji: string; label: string }[] = [
-  { key: "attacker", emoji: "🎯", label: "Attacker" },
-  { key: "model", emoji: "🤖", label: "Model" },
-  { key: "defender", emoji: "🛡️", label: "Defender" },
+const STAGES = [
+  { key: "attacker" as const, icon: Target, label: "Attacker" },
+  { key: "model" as const, icon: Bot, label: "Model" },
+  { key: "defender" as const, icon: ShieldCheck, label: "Defender" },
 ];
 
 // Watches new audit entries arrive and animates a pulse through the three
@@ -66,6 +67,8 @@ export default function AttackPipeline({ entries }: { entries: AuditEntry[] }) {
         {STAGES.map((stage, i) => {
           const active = pulses.some((p) => p.stage === stage.key);
           const isDefender = stage.key === "defender";
+          const iconTone =
+            stage.key === "attacker" ? "text-attacker" : stage.key === "defender" ? "text-defender" : "text-muted-foreground";
           const ring =
             isDefender && flash === "caught"
               ? "ring-4 ring-caught/30 border-caught"
@@ -74,12 +77,13 @@ export default function AttackPipeline({ entries }: { entries: AuditEntry[] }) {
               : active
               ? "ring-4 ring-primary/15 border-primary/40 scale-110"
               : "border-border";
+          const Icon = stage.icon;
           return (
             <div key={stage.key} className="relative z-10 flex flex-col items-center gap-2 flex-1">
               <div
-                className={`w-14 h-14 rounded-full bg-card border-2 grid place-items-center text-2xl transition-all duration-300 ${ring}`}
+                className={`w-14 h-14 rounded-full bg-card border-2 grid place-items-center transition-all duration-300 ${ring}`}
               >
-                {stage.emoji}
+                <Icon size={22} strokeWidth={2} className={iconTone} />
               </div>
               <span className="text-xs font-medium text-muted-foreground">{stage.label}</span>
               {isDefender && flash && (

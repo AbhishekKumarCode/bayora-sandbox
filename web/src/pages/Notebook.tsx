@@ -1,14 +1,15 @@
 import { useEffect, useState } from "react";
+import { Target, Bot, ShieldCheck, DoorOpen, CheckCircle2, XCircle, type LucideIcon } from "lucide-react";
 import { getAudit, verifyChain, type AuditEntry, type VerifyResult } from "../lib/api";
 import { roomOf } from "../lib/stats";
 import ActivityFeed from "../components/ActivityFeed";
 import { Card, PageHead } from "../components/ui";
 
-const roomCounterLabels: Record<ReturnType<typeof roomOf>, string> = {
-  attacker: "🎯 Attacker",
-  model: "🤖 Model",
-  defender: "🛡️ Defender",
-  hallway: "🚪 Hallway",
+const roomCounterMeta: Record<ReturnType<typeof roomOf>, { label: string; icon: LucideIcon }> = {
+  attacker: { label: "Attacker", icon: Target },
+  model: { label: "Model", icon: Bot },
+  defender: { label: "Defender", icon: ShieldCheck },
+  hallway: { label: "Hallway", icon: DoorOpen },
 };
 
 export default function Notebook() {
@@ -46,7 +47,7 @@ export default function Notebook() {
     }
   }
 
-  const counts = (Object.keys(roomCounterLabels) as (keyof typeof roomCounterLabels)[]).reduce(
+  const counts = (Object.keys(roomCounterMeta) as (keyof typeof roomCounterMeta)[]).reduce(
     (acc, room) => {
       acc[room] = entries.filter((e) => roomOf(e.event) === room).length;
       return acc;
@@ -113,26 +114,33 @@ export default function Notebook() {
 
         {result && (
           <div
-            className={`text-sm rounded-card px-4 py-3 border ${
+            className={`flex items-center gap-2 text-sm rounded-card px-4 py-3 border ${
               result.ok
                 ? "bg-caught-soft border-caught/30 text-caught"
                 : "bg-destructive/10 border-destructive/30 text-destructive"
             }`}
           >
+            {result.ok ? <CheckCircle2 size={16} className="shrink-0" /> : <XCircle size={16} className="shrink-0" />}
             {result.ok
-              ? `✓ Chain verified — ${result.count} entries intact, recomputed server-side.`
-              : `✗ Chain broken at seq=${result.brokenAtSeq} — ${result.reason}.`}
+              ? `Chain verified — ${result.count} entries intact, recomputed server-side.`
+              : `Chain broken at seq=${result.brokenAtSeq} — ${result.reason}.`}
           </div>
         )}
       </Card>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {(Object.keys(roomCounterLabels) as (keyof typeof roomCounterLabels)[]).map((room) => (
-          <Card key={room} className="!px-4 !py-3">
-            <div className="text-xs text-muted-foreground">{roomCounterLabels[room]}</div>
-            <div className="font-display font-bold text-xl mt-1">{counts[room] ?? 0}</div>
-          </Card>
-        ))}
+        {(Object.keys(roomCounterMeta) as (keyof typeof roomCounterMeta)[]).map((room) => {
+          const { label, icon: Icon } = roomCounterMeta[room];
+          return (
+            <Card key={room} className="!px-4 !py-3">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Icon size={13} />
+                {label}
+              </div>
+              <div className="font-display font-bold text-xl mt-1">{counts[room] ?? 0}</div>
+            </Card>
+          );
+        })}
       </div>
 
       <ActivityFeed entries={entries} />

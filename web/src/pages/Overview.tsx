@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ShieldCheck, TrendingDown, Target } from "lucide-react";
+import { ShieldCheck, TrendingDown, Target, Bot } from "lucide-react";
 import { getAudit, type AuditEntry } from "../lib/api";
 import { computeStats } from "../lib/stats";
 import { useCountUp } from "../lib/useCountUp";
@@ -124,14 +124,21 @@ export default function Overview() {
             <div className="relative flex flex-1 flex-col rounded-b-3xl bg-white p-7 text-foreground md:p-9 lg:rounded-tl-[2rem]">
               <div className="grid flex-1 gap-3">
                 <RoomCard
-                  emoji="🎯"
+                  icon={Target}
                   title="Attacker room"
                   description="Invents tricky prompts to trip up the model."
                   agentLabel="Red-team agent v4"
                   tone="attacker"
                 />
                 <RoomCard
-                  emoji="🛡️"
+                  icon={Bot}
+                  title="Model under test"
+                  description="Answers whatever it's given, with no idea it's being tested."
+                  agentLabel="Subject model v1"
+                  tone="default"
+                />
+                <RoomCard
+                  icon={ShieldCheck}
                   title="Defender room"
                   description="Judges answers as safe or not — never sees the question."
                   agentLabel="Safety judge v2"
