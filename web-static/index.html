@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f7f9fd">
+  <meta name="description" content="Bayora — secure adversarial AI testing infrastructure.">
+  <title>Bayora — AI Safety Platform</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <button class="mobile-menu" id="mobileMenu" aria-label="Toggle navigation">☰</button>
+  <div class="mobile-scrim" id="mobileScrim"></div>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <button class="brand" data-page="overview" aria-label="Bayora overview">
+        <span class="brand-mark">A</span><span class="brand-name">BAYORA <small>v0.1</small></span>
+      </button>
+      <p class="brand-tagline">Adversarial testing<br>for safer AI.</p>
+      <nav class="primary-nav" id="primaryNav">
+        <button class="nav-link active" data-page="overview"><span class="nav-icon">⌂</span>Overview</button>
+        <button class="nav-link" data-page="live-testing"><span class="nav-icon">◉</span>Live Testing</button>
+        <button class="nav-link" data-page="attack-library"><span class="nav-icon">▤</span>Attack Library</button>
+        <button class="nav-link" data-page="defense-lab"><span class="nav-icon">⬡</span>Defense Lab</button>
+        <button class="nav-link" data-page="audit-logs"><span class="nav-icon">▣</span>Audit Logs <span class="nav-count">8</span></button>
+        <button class="nav-link" data-page="analytics"><span class="nav-icon">▥</span>Analytics</button>
+        <button class="nav-link" data-page="reports"><span class="nav-icon">▧</span>Reports</button>
+        <button class="nav-link" data-page="settings"><span class="nav-icon">⚙</span>Settings</button>
+      </nav>
+      <div class="sidebar-divider"></div>
+      <div class="section-label">SANDBOX</div>
+      <div class="sidebar-status"><span class="dot green"></span>All systems isolated</div>
+      <div class="room-links">
+        <button class="room-link" data-page="testing-rooms"><span class="room-icon red">◎</span>Attacker Room</button>
+        <button class="room-link" data-page="testing-rooms"><span class="room-icon purple">⬡</span>Model Room</button>
+        <button class="room-link" data-page="testing-rooms"><span class="room-icon blue">⬢</span>Defender Room</button>
+      </div>
+      <div class="sidebar-bottom">
+        <div class="session-card">
+          <div class="session-head"><span class="dot green"></span>Sandbox Online</div>
+          <p>All systems isolated</p><div class="session-rule"></div>
+          <div class="session-head muted"><span class="dot hollow"></span>Active Session</div>
+          <div class="session-id">#HILL-001 <button id="copySession" title="Copy session ID">▢</button></div>
+        </div>
+        <div class="event-card">
+          <div class="event-mountain"><span></span><span></span><span></span></div>
+          <div class="event-card-content"><strong>Hack in Hills ’26</strong><span>Safer AI for a safer tomorrow.</span><span class="event-arrow">↗</span></div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main-area">
+      <header class="topbar">
+        <div class="search-wrap"><span>⌕</span><input id="globalSearch" type="search" placeholder="Search runs, prompts, logs, or rooms…"><kbd>Ctrl K</kbd></div>
+        <div class="topbar-right">
+          <div class="online-pill" id="onlinePill"><span class="dot" id="onlineDot"></span><span id="onlineLabel">Connecting…</span><i></i><span id="onlineClock">--:--:--</span></div>
+          <button class="btn btn-secondary" id="connectBroker">Connect broker</button>
+          <button class="icon-button" id="notifications" aria-label="Notifications">♧<span class="notification-dot"></span></button>
+          <button class="avatar" id="profile" aria-label="Profile">A</button>
+        </div>
+      </header>
+      <div class="page-wrap">
+        <div class="page-heading">
+          <div><div class="eyebrow">SECURE ADVERSARIAL AI TESTING INFRASTRUCTURE</div><h1 id="pageTitle">Overview</h1><p id="pageSubtitle">A clear view of your AI safety posture.</p></div>
+          <div class="heading-actions"><span class="demo-chip"><span class="dot green"></span>Demo environment</span><button class="btn btn-primary" id="startRun"><span>▶</span> Start new run <span>→</span></button></div>
+        </div>
+        <div id="pageContent"></div>
+        <footer class="page-footer"><span>Bayora <b>v0.1</b></span><span>Hack in Hills ’26 · UI prototype</span><span><span class="dot green"></span>All systems isolated</span></footer>
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-backdrop hidden" id="runModal">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-header"><div><div class="eyebrow">NEW EVALUATION</div><h2 id="modalTitle">Configure a test run</h2><p>Choose the suite and scope for this demo evaluation.</p></div><button class="icon-button" id="closeModal" aria-label="Close">×</button></div>
+      <div class="modal-body">
+        <label class="form-label">Test suite<select class="form-input" id="dataset"><option>AdvBench sample</option><option>JailbreakBench sample</option><option>Prompt injection regression</option><option>Custom test suite</option></select></label>
+        <label class="form-label">Evaluation scope<select class="form-input" id="scope"><option>Full evaluation</option><option>Jailbreak only</option><option>Prompt injection only</option><option>Regression subset</option></select></label>
+        <div class="modal-info"><span>⬡</span><div><b>Isolated execution</b><p>This UI action demonstrates the flow only. It does not launch a real model evaluation.</p></div></div>
+      </div>
+      <div class="modal-footer"><button class="btn btn-secondary" id="cancelModal">Cancel</button><button class="btn btn-primary" id="confirmRun">▶ Start demo run</button></div>
+    </section>
+  </div>
+  <div class="toast hidden" id="toast"><span>✓</span><span id="toastMessage">Done</span></div>
+  <script src="script.js"></script>
+</body>
+</html>
