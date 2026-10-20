@@ -1,17 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Play, Radio, Plug } from "lucide-react";
+import { Play, Plug } from "lucide-react";
 import { useStore, useNow } from "@/lib/store";
-import { groupAttacks, isLive, fmtAgo, techniqueLabel, verdictLabel } from "@/lib/model";
-import { Button, Card, Pill, Glow, Actor, cx, verdictTone } from "@/components/ui";
-import { AttackTrio } from "@/components/Timeline";
+import { groupAttacks, isLive, fmtAgo } from "@/lib/model";
+import { Button, Card, Pill, Glow, Actor, cx } from "@/components/ui";
+import { AttackCard } from "@/components/Timeline";
 import { ConnectDialog } from "@/components/ConnectDialog";
+import { Heading } from "./Overview";
 
 export function Live() {
   const s = useStore();
   const now = useNow(500);
   const live = isLive(s.entries, now);
   const attacks = useMemo(() => groupAttacks(s.entries), [s.entries]);
-  const recent = attacks.slice(-8).reverse();
+  const recent = attacks.slice(-5).reverse();
   const last = s.entries[s.entries.length - 1];
   const [msg, setMsg] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
@@ -25,110 +26,65 @@ export function Live() {
     if (n.size) { setFresh(n); const id = setTimeout(() => setFresh(new Set()), 800); return () => clearTimeout(id); }
   }, [attacks]);
 
-  // which stage is hot right now
+  // which room is working right now
   const stage: "idle" | "model" | "judge" | "seal" =
     !live || !last ? "idle" : last.event === "attack_submitted" ? "model" : last.event === "llm_response_received" ? "judge" : "seal";
+  const stageText = stage === "idle" ? "Idle. Nothing is running." : stage === "model" ? "An attack was just sent. Waiting for the model to reply." : stage === "judge" ? "The model replied. The blind judge is scoring it." : "Verdict sealed into the record. Next attack coming up.";
 
   async function start() {
     setStarting(true); setMsg(null);
-    try { const st = await s.triggerRun(); setMsg(st === "started" ? "Run started. Attacks will land below as the broker logs them." : st); }
+    try { const st = await s.triggerRun(); setMsg(st === "started" ? "Run started. Attacks will appear below as the broker logs them." : st); }
     catch (e) { setMsg(e instanceof Error ? e.message : String(e)); }
     finally { setStarting(false); }
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-[920px] space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-[24px] font-semibold tracking-tight">Live run</h1>
-          <p className="mt-1 text-[13.5px] text-muted">Watch attacks move through the rooms as the broker records them. Polling every 2s.</p>
+          <h1 className="text-[28px] font-semibold tracking-tight sm:text-[32px]">Live run</h1>
+          <p className="mt-1.5 text-[14px] text-muted">Start a run and watch each attack move through the three rooms.</p>
         </div>
         <div className="flex gap-2">
           {s.source !== "broker" && <Button variant="secondary" onClick={() => setConnectOpen(true)}><Plug size={15} /> Connect broker</Button>}
           <Button onClick={start} disabled={starting || s.source !== "broker"}><Play size={15} /> {starting ? "Starting…" : "Start a run"}</Button>
         </div>
       </div>
+      {s.source !== "broker" && <p className="-mt-4 text-[13px] text-muted">Starting a run needs a connected broker. Demo data is read-only.</p>}
       {msg && <div className={cx("rounded-[10px] px-4 py-2.5 text-[13px] rise", msg.startsWith("Run started") ? "bg-sealed-soft text-sealed" : "bg-pending-soft text-pending")}>{msg}</div>}
 
-      {/* Pipeline stage */}
+      {/* The three rooms */}
       <Card className="overflow-hidden p-0">
-        <div className="relative px-6 py-10 sm:px-10">
-          <div className="grid-paper absolute inset-0" aria-hidden />
-          <Glow tone="attack" size={360} className={cx("left-[6%] top-1/2 -translate-y-1/2 transition-opacity duration-700", stage === "model" ? "opacity-70" : "opacity-20")} />
-          <Glow tone="brand" size={360} className={cx("left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transition-opacity duration-700", stage === "judge" ? "opacity-70" : "opacity-25")} />
-          <Glow tone="judge" size={360} className={cx("right-[6%] top-1/2 -translate-y-1/2 transition-opacity duration-700", stage === "seal" ? "opacity-70" : "opacity-20")} />
-
-          <div className="relative grid grid-cols-3 items-center gap-2">
+        <div className="relative px-6 py-9 sm:px-10">
+          <Glow tone="attack" size={320} className={cx("left-[4%] top-1/2 -translate-y-1/2 transition-opacity duration-700", stage === "model" ? "opacity-60" : "opacity-0")} />
+          <Glow tone="brand" size={320} className={cx("left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transition-opacity duration-700", stage === "judge" ? "opacity-60" : "opacity-0")} />
+          <Glow tone="judge" size={320} className={cx("right-[4%] top-1/2 -translate-y-1/2 transition-opacity duration-700", stage === "seal" ? "opacity-60" : "opacity-0")} />
+          <div className="relative grid grid-cols-3 items-start gap-2">
             <svg className="pointer-events-none absolute inset-x-0 top-[36px] h-2 w-full" aria-hidden>
-              <line x1="22%" x2="44%" y1="4" y2="4" stroke="var(--color-attack)" strokeWidth="2" className={cx(live && "flow-line")} opacity={live ? 0.9 : 0.3} />
-              <line x1="56%" x2="78%" y1="4" y2="4" stroke="var(--color-judge)" strokeWidth="2" className={cx(live && "flow-line")} opacity={live ? 0.9 : 0.3} />
+              <line x1="22%" x2="44%" y1="4" y2="4" stroke="var(--color-attack)" strokeWidth="2" className={cx(live && "flow-line")} opacity={live ? 0.9 : 0.25} />
+              <line x1="56%" x2="78%" y1="4" y2="4" stroke="var(--color-judge)" strokeWidth="2" className={cx(live && "flow-line")} opacity={live ? 0.9 : 0.25} />
             </svg>
-            <Node kind="attacker" label="Red room" sub="fires attacks" hot={stage === "model"} />
-            <Node kind="model" label="Model" sub="under test" hot={stage === "judge"} />
-            <Node kind="judge" label="Blue room" sub="judges blind" hot={stage === "seal"} />
+            <Node kind="attacker" label="1 · Attacker" sub="sends a jailbreak prompt" hot={stage === "model"} />
+            <Node kind="model" label="2 · Model" sub="replies, unaware it's a test" hot={stage === "judge"} />
+            <Node kind="judge" label="3 · Blind judge" sub="scores the reply only" hot={stage === "seal"} />
           </div>
-
-          <div className="relative mt-8 flex flex-wrap items-center justify-between gap-3 rounded-[12px] border border-line bg-white/80 px-4 py-3 backdrop-blur">
-            <div className="flex items-center gap-2 text-[13px]">
-              <span className={cx("relative h-2.5 w-2.5 rounded-full", live ? "bg-attack pulse-ring text-attack" : "bg-faint")} />
-              <span className="font-semibold">{live ? "Run in progress" : "Idle"}</span>
-              <span className="text-muted">{last ? `· last event ${fmtAgo(last.ts, now)}` : "· waiting for first event"}</span>
-            </div>
-            <div className="flex items-center gap-2 text-[12.5px] text-muted">
-              <Actor kind="seal" size={20} />
-              {s.entries.length} sealed entries
-              {s.source === "demo" && <Pill tone="brand">demo</Pill>}
-              {s.mockMode && s.source === "broker" && <Pill tone="pending">mock LLM</Pill>}
-            </div>
+          <div className="relative mt-8 flex items-center gap-3 rounded-[12px] border border-line bg-white px-4 py-3 text-[13.5px]">
+            <span className={cx("relative h-2.5 w-2.5 shrink-0 rounded-full", live ? "bg-attack pulse-ring text-attack" : "bg-faint")} />
+            <span className="text-ink">{stageText}</span>
+            <span className="ml-auto shrink-0 text-[12.5px] text-muted">{last ? `last event ${fmtAgo(last.ts, now)}` : "no events yet"}</span>
           </div>
         </div>
       </Card>
 
-      {/* Event stream */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <h2 className="mb-3 text-[17px] font-semibold tracking-tight">Event stream</h2>
-          <Card className="p-2">
-            <div className="divide-y divide-line">
-              {recent.map((a) => <AttackTrio key={a.attackId} a={a} animate={fresh.has(a.attackId)} defaultOpen={fresh.has(a.attackId)} />)}
-              {recent.length === 0 && <div className="py-10 text-center text-[13px] text-muted">No events yet.</div>}
-            </div>
-          </Card>
+      <section>
+        <Heading title="Latest attacks" sub="Newest first. Each card is one attack: sent, replied, judged." right={s.source === "demo" ? <Pill tone="brand">demo</Pill> : s.mockMode ? <Pill tone="pending">mock LLM</Pill> : undefined} />
+        <div className="space-y-3">
+          {recent.map((a) => <AttackCard key={a.attackId} a={a} animate={fresh.has(a.attackId)} />)}
+          {recent.length === 0 && <Card className="p-8 text-center text-[13px] text-muted">No attacks yet.</Card>}
         </div>
-        <aside className="space-y-4">
-          <Card className="p-5" glow="judge">
-            <div className="text-[12px] font-medium uppercase tracking-[0.08em] text-muted">Latest verdict</div>
-            {(() => {
-              const v = [...s.entries].reverse().find((e) => e.event === "blue_team_verdict");
-              if (!v) return <div className="mt-2 text-[13px] text-muted">None yet.</div>;
-              const a = attacks.find((x) => x.attackId === v.data.attackId);
-              return (
-                <div className="mt-3">
-                  <div className="flex items-center gap-2">
-                    <Actor kind="judge" size={28} />
-                    <span className="text-[15px] font-semibold">{verdictLabel(v.data.verdict)}</span>
-                    <Pill tone={verdictTone(v.data.verdict)} className="ml-auto">{Math.round((v.data.confidence ?? 0) * 100)}%</Pill>
-                  </div>
-                  <div className="mt-2 text-[13px] text-ink-2">{v.data.notes}</div>
-                  {a && <div className="mt-2 text-[12px] text-muted">on {techniqueLabel(a.technique)} · {fmtAgo(v.ts, now)}</div>}
-                </div>
-              );
-            })()}
-          </Card>
-          <Card className="p-5">
-            <div className="text-[12px] font-medium uppercase tracking-[0.08em] text-muted">Isolation</div>
-            <ul className="mt-2 space-y-1.5 text-[13px] text-ink-2">
-              <li>Red room → broker only, on <code className="mono">red-net</code></li>
-              <li>Blue room → broker only, on <code className="mono">blue-net</code></li>
-              <li>No shared network between rooms</li>
-              <li>Judge receives reply text only</li>
-            </ul>
-          </Card>
-        </aside>
-      </div>
+      </section>
 
       {connectOpen && <ConnectDialog onClose={() => setConnectOpen(false)} />}
-      <Radio className="hidden" />
     </div>
   );
 }

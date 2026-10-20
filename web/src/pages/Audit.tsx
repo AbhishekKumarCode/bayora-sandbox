@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { ShieldCheck, ShieldAlert, Link2, FlaskConical } from "lucide-react";
+import { ShieldCheck, ShieldAlert, FlaskConical } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { fmtTime, fmtDate } from "@/lib/model";
 import { Button, Card, Pill, Hash, Actor, cx } from "@/components/ui";
@@ -42,7 +42,7 @@ export function Audit() {
     <div className="space-y-6">
       <div>
         <h1 className="text-[24px] font-semibold tracking-tight">Audit chain</h1>
-        <p className="mt-1 text-[13.5px] text-muted">Every event, HMAC-SHA256 chained to the one before it. Change any byte and verification fails from that entry onward.</p>
+        <p className="mt-1 text-[13.5px] text-muted">The full record, newest first. Each entry carries a keyed hash of itself plus the previous entry, so editing one breaks every entry after it.</p>
       </div>
 
       {/* Verify panel */}
@@ -70,8 +70,8 @@ export function Audit() {
           <div className="flex items-start gap-4 rounded-[12px] border border-dashed border-line-strong p-4">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-pending-soft text-pending"><FlaskConical size={18} /></div>
             <div className="min-w-0">
-              <div className="text-[13.5px] font-semibold">Simulate tampering</div>
-              <div className="mt-0.5 text-[12.5px] text-muted">Asks the broker what verification would report if one entry were altered. Nothing is written to the real log.</div>
+              <div className="text-[13.5px] font-semibold">Try to tamper</div>
+              <div className="mt-0.5 text-[12.5px] text-muted">Pick an entry number and pretend it was edited. The broker shows where verification would fail. The real record is untouched.</div>
               <div className="mt-3 flex items-center gap-2">
                 <input type="number" min={1} max={s.entries.length} value={tamperSeq} onChange={(e) => setTamperSeq(e.target.value === "" ? "" : Number(e.target.value))} placeholder={`seq (1–${s.entries.length})`} className="mono h-9 w-36 rounded-[10px] border border-line bg-white px-3 text-[13px] outline-none focus:border-brand focus:ring-2 focus:ring-brand/20" />
                 <Button variant="secondary" onClick={() => run("tamper")} disabled={busy != null}>{busy === "tamper" ? "Checking…" : "Tamper → verify"}</Button>
@@ -106,23 +106,20 @@ export function Audit() {
                 </div>
                 <Actor kind={meta.actor} size={32} />
                 <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <span className="text-[13.5px] font-semibold">{meta.label}</span>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <span className="mono text-[12px] text-muted">#{e.seq}</span>
-                    <span className="text-[12px] text-muted">{fmtDate(e.ts)} {fmtTime(e.ts)}</span>
-                    {e.event === "attack_submitted" && <Pill tone="attack">{e.data.technique}</Pill>}
-                    {e.event === "blue_team_verdict" && <Pill tone={e.data.verdict === "blocked" ? "sealed" : e.data.verdict === "passed_through" ? "attack" : "pending"}>{e.data.verdict} · {Math.round((e.data.confidence ?? 0) * 100)}%</Pill>}
-                    {e.data.mock && <Pill tone="pending">mock</Pill>}
-                    {isBreak && <Pill tone="attack" dot>break detected here</Pill>}
-                    {broken && !isBreak && <Pill tone="attack">inherits break</Pill>}
+                    <span className="text-[14px] font-semibold">{meta.label}</span>
+                    {e.event === "attack_submitted" && <span className="mono text-[12.5px] text-attack">{e.data.technique}</span>}
+                    {e.event === "blue_team_verdict" && <span className={cx("text-[13px] font-medium", e.data.verdict === "blocked" ? "text-sealed" : e.data.verdict === "passed_through" ? "text-attack" : "text-pending")}>{e.data.verdict === "passed_through" ? "got through" : e.data.verdict} · {Math.round((e.data.confidence ?? 0) * 100)}% sure</span>}
+                    {isBreak && <Pill tone="attack" dot>altered here</Pill>}
+                    {broken && !isBreak && <Pill tone="attack">broken by #{brokenAt}</Pill>}
+                    <span className="ml-auto text-[12px] text-muted">{fmtDate(e.ts)} {fmtTime(e.ts)}</span>
                   </div>
-                  {e.event === "llm_response_received" && <div className="mono mt-1.5 truncate text-[12.5px] text-ink-2">{e.data.responsePreview}</div>}
-                  {e.event === "blue_team_verdict" && e.data.notes && <div className="mt-1.5 text-[12.5px] text-ink-2">{e.data.notes}</div>}
-                  {e.event === "llm_error" && <div className="mono mt-1.5 text-[12.5px] text-attack">{e.data.error}</div>}
-                  <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-muted">
-                    <span className="flex items-center gap-1"><Link2 size={12} /> hash <Hash value={e.hash} n={8} /></span>
-                    <span>prev <Hash value={e.prevHash} n={8} /></span>
-                    {e.data.attackId && <span>attack <Hash value={e.data.attackId} n={4} /></span>}
+                  {e.event === "llm_response_received" && <div className="mono mt-1 truncate text-[12.5px] text-ink-2">"{e.data.responsePreview}"</div>}
+                  {e.event === "blue_team_verdict" && e.data.notes && <div className="mt-1 text-[12.5px] text-ink-2">{e.data.notes}</div>}
+                  {e.event === "llm_error" && <div className="mono mt-1 text-[12.5px] text-attack">{e.data.error}</div>}
+                  <div className="mt-1.5 text-[12px] text-muted">
+                    hash <Hash value={e.hash} n={8} />{e.seq > 1 && <> · linked to #{e.seq - 1}</>}
                   </div>
                 </div>
               </div>

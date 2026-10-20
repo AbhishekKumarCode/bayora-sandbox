@@ -69,8 +69,7 @@ export function Shell() {
     <div className="min-h-screen bg-canvas text-ink">
       {/* page glows */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
-        <Glow tone="brand" size={700} className="-top-72 right-[-10%] opacity-35" drift="a" />
-        <Glow tone="judge" size={520} className="bottom-[-20%] left-[30%] opacity-25" drift="b" />
+        <Glow tone="brand" size={800} className="-top-96 right-[-15%] opacity-20" />
       </div>
 
       <div className="relative flex min-h-screen">

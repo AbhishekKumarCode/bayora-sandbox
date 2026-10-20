@@ -3,8 +3,9 @@ import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, Download, ShieldCheck, ShieldAlert } from "lucide-react";
 import { useStore, useNow } from "@/lib/store";
 import { deriveRuns, fmtDate, fmtTime, fmtDuration } from "@/lib/model";
-import { Button, Card, Pill, Stat, Hash, Empty, cx } from "@/components/ui";
-import { AttackTrio } from "@/components/Timeline";
+import { Button, Card, Pill, Hash, Empty, cx } from "@/components/ui";
+import { AttackCard } from "@/components/Timeline";
+import { Heading } from "./Overview";
 import type { VerifyResult } from "@/lib/api";
 
 export function RunDetail() {
@@ -13,7 +14,7 @@ export function RunDetail() {
   const now = useNow(2000);
   const runs = useMemo(() => deriveRuns(s.entries, now), [s.entries, now]);
   const run = runs.find((r) => r.id === id);
-  const [filter, setFilter] = useState<"all" | "blocked" | "passed_through" | "ambiguous">("all");
+  const [filter, setFilter] = useState<"all" | "passed_through">("all");
   const [verify, setVerify] = useState<VerifyResult | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -33,78 +34,53 @@ export function RunDetail() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <Link to="/app/runs" className="mb-2 inline-flex items-center gap-1 text-[13px] text-muted hover:text-ink"><ArrowLeft size={14} /> Runs</Link>
-          <div className="flex items-center gap-3">
-            <h1 className="text-[24px] font-semibold tracking-tight">Run {run.index}</h1>
-            {run.live ? <Pill tone="attack" dot>Live</Pill> : <Pill tone="sealed">Sealed</Pill>}
+    <div className="mx-auto max-w-[920px] space-y-8">
+      <div>
+        <Link to="/app/runs" className="inline-flex items-center gap-1 text-[13px] text-muted hover:text-ink"><ArrowLeft size={14} /> All runs</Link>
+        <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-[28px] font-semibold leading-tight tracking-tight sm:text-[32px]">
+              Run {run.index}: <span className={run.passed ? "text-attack" : "text-sealed"}>{run.passed ? `${run.passed} of ${run.attacks.length} got through` : `all ${run.attacks.length} blocked`}</span>
+            </h1>
+            <p className="mt-1.5 text-[14px] text-muted">
+              {fmtDate(run.startedAt)}, {fmtTime(run.startedAt)} · took {fmtDuration(run.startedAt, run.endedAt)} · {run.blocked} blocked, {run.ambiguous} unsure{run.pending ? `, ${run.pending} still judging` : ""}
+              {" · "}{run.live ? <Pill tone="attack" dot>live</Pill> : <Pill tone="sealed">sealed</Pill>}
+            </p>
           </div>
-          <p className="mt-1 text-[13.5px] text-muted">{fmtDate(run.startedAt)} · {fmtTime(run.startedAt)} → {fmtTime(run.endedAt)} · {fmtDuration(run.startedAt, run.endedAt)}</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="secondary" onClick={exportJson}><Download size={15} /> Export evidence</Button>
-          <Button onClick={doVerify} disabled={busy}>{busy ? "Verifying…" : "Verify chain"}</Button>
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={exportJson}><Download size={15} /> Export</Button>
+            <Button onClick={doVerify} disabled={busy}>{busy ? "Checking…" : "Verify record"}</Button>
+          </div>
         </div>
       </div>
 
       {verify && (
-        <div className={cx("flex items-center gap-3 rounded-[12px] px-4 py-3 text-[13px] rise", verify.ok ? "bg-sealed-soft text-sealed" : "bg-attack-soft text-attack")}>
+        <div className={cx("flex items-center gap-3 rounded-[12px] px-4 py-3 text-[13.5px] rise", verify.ok ? "bg-sealed-soft text-sealed" : "bg-attack-soft text-attack")}>
           {verify.ok ? <ShieldCheck size={18} /> : <ShieldAlert size={18} />}
-          {verify.ok ? <>Whole chain intact ({verify.count} entries). Final hash <Hash value={verify.finalHash} className="text-sealed" />.</> : <>Chain broken at entry {verify.brokenAtSeq}: {verify.reason}.</>}
+          {verify.ok ? <>The whole record is intact: all {verify.count} entries recompute to the same hashes.</> : <>The record is broken at entry {verify.brokenAtSeq}: {verify.reason}.</>}
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Stat label="Attacks" value={run.attacks.length} tone="attack" />
-        <Stat label="Blocked" value={`${run.catchRate}%`} sub={`${run.blocked} of ${run.blocked + run.passed + run.ambiguous} judged`} tone="sealed" />
-        <Stat label="Got through" value={run.passed} sub={`${run.ambiguous} unsure · ${run.pending} pending`} tone="judge" />
-        <Stat label="Chain span" value={`${run.seqFrom}–${run.seqTo}`} sub={<>ends <Hash value={run.attacks[run.attacks.length - 1].seal?.hash ?? ""} /></>} tone="brand" />
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-[17px] font-semibold tracking-tight">Timeline</h2>
+      <section>
+        <Heading
+          title="Every attack in this run"
+          sub="Top to bottom: what the attacker sent, what the model replied, what the blind judge decided."
+          right={
             <div className="flex gap-1 rounded-[10px] bg-[#eceef2] p-1 text-[12.5px]">
-              {(["all", "blocked", "passed_through", "ambiguous"] as const).map((f) => (
-                <button key={f} onClick={() => setFilter(f)} className={cx("rounded-[8px] px-2.5 py-1 font-medium capitalize", filter === f ? "bg-white shadow-sm" : "text-muted hover:text-ink")}>
-                  {f === "passed_through" ? "got through" : f === "ambiguous" ? "unsure" : f}
-                </button>
-              ))}
+              <button onClick={() => setFilter("all")} className={cx("rounded-[8px] px-2.5 py-1 font-medium", filter === "all" ? "bg-white shadow-sm" : "text-muted hover:text-ink")}>All {run.attacks.length}</button>
+              <button onClick={() => setFilter("passed_through")} className={cx("rounded-[8px] px-2.5 py-1 font-medium", filter === "passed_through" ? "bg-white shadow-sm text-attack" : "text-muted hover:text-ink")}>Got through {run.passed}</button>
             </div>
-          </div>
-          <Card className="p-2">
-            <div className="divide-y divide-line">
-              {shown.map((a, i) => <AttackTrio key={a.attackId} a={a} defaultOpen={i === 0} />)}
-              {shown.length === 0 && <div className="py-10 text-center text-[13px] text-muted">Nothing matches this filter.</div>}
-            </div>
-          </Card>
+          }
+        />
+        <div className="space-y-3">
+          {shown.map((a, i) => <AttackCard key={a.attackId} a={a} index={run.attacks.indexOf(a) + 1} animate={i === 0 && false} />)}
+          {shown.length === 0 && <Card className="p-8 text-center text-[13px] text-muted">Nothing got through in this run.</Card>}
         </div>
+      </section>
 
-        <aside className="space-y-4 lg:sticky lg:top-8 lg:self-start">
-          <Card className="p-5" glow="brand">
-            <div className="text-[12px] font-medium uppercase tracking-[0.08em] text-muted">Run facts</div>
-            <dl className="mt-3 space-y-2.5 text-[13px]">
-              <Row k="Target" v={s.mockMode && s.source === "broker" ? "mock model" : s.source === "demo" ? "demo model" : "model under test"} />
-              <Row k="Judge" v="blue room · blind" />
-              <Row k="Source" v={s.source === "demo" ? "demo data" : "live broker"} />
-              <Row k="Entries" v={`${entries.length} in chain`} />
-              <Row k="First hash" v={<Hash value={entries[0]?.hash ?? ""} />} />
-              <Row k="Last hash" v={<Hash value={entries[entries.length - 1]?.hash ?? ""} />} />
-            </dl>
-          </Card>
-          <Card className="p-5">
-            <div className="text-[12px] font-medium uppercase tracking-[0.08em] text-muted">What the judge saw</div>
-            <p className="mt-2 text-[13px] text-ink-2">Only the model's reply. Never the attack prompt, never the technique label. That is enforced by the broker's <code className="mono">/pending</code> route, not by this UI.</p>
-          </Card>
-        </aside>
-      </div>
+      <p className="text-[12.5px] text-muted">
+        This run is entries {run.seqFrom} to {run.seqTo} of the record. First hash <Hash value={entries[0]?.hash ?? ""} />, last hash <Hash value={entries[entries.length - 1]?.hash ?? ""} />. The judge only ever received the model's reply text, never the prompt. That is enforced by the broker, not by this page.
+      </p>
     </div>
   );
-}
-
-function Row({ k, v }: { k: string; v: React.ReactNode }) {
-  return <div className="flex items-center justify-between gap-3"><dt className="text-muted">{k}</dt><dd className="font-medium text-ink">{v}</dd></div>;
 }
