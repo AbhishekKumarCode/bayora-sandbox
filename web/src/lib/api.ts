@@ -2,8 +2,16 @@
 // AUDIT_TOKEN, and only after the user explicitly connects. It never holds
 // RED_TEAM_TOKEN or BLUE_TEAM_TOKEN, by design.
 
-export const BROKER_URL: string =
+export const DEFAULT_BROKER_URL: string =
   import.meta.env.VITE_BROKER_URL || "https://meal-argued-successful-gentle.trycloudflare.com";
+
+const URL_KEY = "bayora_broker_url";
+export function getBrokerUrl(): string {
+  try { return (localStorage.getItem(URL_KEY) || DEFAULT_BROKER_URL).replace(/\/+$/, ""); } catch { return DEFAULT_BROKER_URL; }
+}
+export function setBrokerUrl(url: string) {
+  try { if (!url || url === DEFAULT_BROKER_URL) localStorage.removeItem(URL_KEY); else localStorage.setItem(URL_KEY, url.trim().replace(/\/+$/, "")); } catch { /* ignore */ }
+}
 
 const TOKEN_KEY = "bayora_audit_token";
 
@@ -44,14 +52,19 @@ export type AuditEntry = {
 
 export class ForbiddenError extends Error {}
 
+async function safeFetch(input: string, init?: RequestInit): Promise<Response> {
+  try { return await fetch(input, init); }
+  catch { throw new Error(`Could not reach ${getBrokerUrl()}. Is the broker running and the tunnel up? A browser ad-blocker can also block trycloudflare.com.`); }
+}
+
 export async function getHealth(): Promise<{ ok: boolean; mockMode: boolean }> {
-  const res = await fetch(`${BROKER_URL}/health`);
+  const res = await safeFetch(`${getBrokerUrl()}/health`);
   if (!res.ok) throw new Error(`health ${res.status}`);
   return res.json();
 }
 
 export async function getAudit(): Promise<{ count: number; entries: AuditEntry[] }> {
-  const res = await fetch(`${BROKER_URL}/audit`, { headers: authHeaders() });
+  const res = await safeFetch(`${getBrokerUrl()}/audit`, { headers: authHeaders() });
   if (res.status === 401 || res.status === 403) throw new ForbiddenError("bad AUDIT_TOKEN");
   if (!res.ok) throw new Error(`audit ${res.status}`);
   return res.json();
@@ -63,14 +76,14 @@ export type VerifyResult =
 
 export async function verifyChain(simulateTamperSeq?: number): Promise<VerifyResult> {
   const qs = simulateTamperSeq != null ? `?simulateTamperSeq=${simulateTamperSeq}` : "";
-  const res = await fetch(`${BROKER_URL}/verify${qs}`, { headers: authHeaders() });
+  const res = await safeFetch(`${getBrokerUrl()}/verify${qs}`, { headers: authHeaders() });
   if (res.status === 401 || res.status === 403) throw new ForbiddenError("bad AUDIT_TOKEN");
   if (!res.ok) throw new Error(`verify ${res.status}`);
   return res.json();
 }
 
 export async function triggerRun(): Promise<{ status: string }> {
-  const res = await fetch(`${BROKER_URL}/trigger-run`, { method: "POST", headers: authHeaders() });
+  const res = await safeFetch(`${getBrokerUrl()}/trigger-run`, { method: "POST", headers: authHeaders() });
   const json = await res.json().catch(() => ({}));
   if (res.status === 401 || res.status === 403) throw new ForbiddenError("bad AUDIT_TOKEN");
   if (!res.ok) throw new Error(json.error || `trigger-run ${res.status}`);

@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { NavLink, Outlet, Link } from "react-router-dom";
+import { NavLink, Outlet, Link, useLocation } from "react-router-dom";
 import { LayoutGrid, ListChecks, Radio, Library, Link2, Settings2, Menu, X, Plug, PlugZap, Database } from "lucide-react";
 import { useStore, useNow } from "@/lib/store";
 import { isLive } from "@/lib/model";
 import { Button, Glow, Pill, cx } from "./ui";
+import { getBrokerUrl } from "@/lib/api";
 import { ConnectDialog } from "./ConnectDialog";
 
 const NAV = [
@@ -20,6 +21,10 @@ export function Shell() {
   const live = isLive(s.entries, now);
   const [open, setOpen] = useState(false);
   const [connectOpen, setConnectOpen] = useState(false);
+  const { pathname } = useLocation();
+  const current = NAV.find((n) => (n.end ? pathname === n.to : pathname.startsWith(n.to))) ?? (pathname.startsWith("/app/settings") ? { label: "Settings" } : undefined);
+  const pageTitle = pathname.match(/^\/app\/runs\/[^/]+/) ? "Run detail" : current?.label ?? "Dashboard";
+  const sinceLastPoll = s.lastPollAt ? Math.round((now - s.lastPollAt) / 1000) : null;
 
   const nav = (
     <nav className="flex flex-col gap-0.5">
@@ -90,10 +95,31 @@ export function Shell() {
 
         {/* Main */}
         <div className="flex min-w-0 flex-1 flex-col">
-          {/* Mobile top bar */}
-          <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-line/80 bg-canvas/80 px-4 backdrop-blur lg:hidden">
-            <Link to="/" className="flex items-center gap-2"><Logo /><span className="text-[14px] font-semibold">Bayora</span></Link>
-            <button onClick={() => setOpen(true)} aria-label="Open menu" className="rounded-[8px] p-2 hover:bg-white"><Menu size={18} /></button>
+          {/* Header */}
+          <header className="sticky top-0 z-30 border-b border-line/80 bg-canvas/85 backdrop-blur">
+            <div className="mx-auto flex h-14 max-w-[1200px] items-center gap-3 px-4 sm:px-6 lg:px-8">
+              <Link to="/" className="flex items-center gap-2 lg:hidden"><Logo /><span className="text-[14px] font-semibold">Bayora</span></Link>
+              <div className="hidden items-center gap-2 text-[13px] lg:flex">
+                <span className="text-muted">Sandbox</span>
+                <span className="text-faint">/</span>
+                <span className="font-medium text-ink">{pageTitle}</span>
+              </div>
+
+              <div className="ml-auto flex items-center gap-2">
+                {live && <Pill tone="attack" dot className="hidden sm:inline-flex">run in progress</Pill>}
+                <div className="hidden items-center gap-2 rounded-full border border-line bg-white py-1 pl-2.5 pr-1.5 text-[12.5px] md:flex" title={getBrokerUrl()}>
+                  <span className={cx("h-2 w-2 rounded-full", s.brokerOnline ? "bg-sealed" : s.brokerOnline === false ? "bg-attack" : "bg-faint")} />
+                  <span className="text-ink-2">
+                    {s.brokerOnline === false ? "broker unreachable" : s.source === "broker" ? `live · synced ${sinceLastPoll == null ? "…" : sinceLastPoll + "s ago"}` : s.brokerOnline ? `broker online${s.mockMode ? " · mock" : ""} · showing demo` : "checking broker"}
+                  </span>
+                  {s.source === "broker"
+                    ? <button onClick={s.disconnect} className="rounded-full bg-canvas px-2 py-0.5 text-[12px] font-medium text-ink-2 hover:bg-[#e6e7eb]">disconnect</button>
+                    : <button onClick={() => setConnectOpen(true)} className="rounded-full bg-ink px-2.5 py-0.5 text-[12px] font-medium text-white hover:bg-[#23262e]">connect</button>}
+                </div>
+                <Button size="sm" variant="secondary" to="/app/live" className="hidden sm:inline-flex"><Radio size={14} /> Live</Button>
+                <button onClick={() => setOpen(true)} aria-label="Open menu" className="rounded-[8px] p-2 hover:bg-white lg:hidden"><Menu size={18} /></button>
+              </div>
+            </div>
           </header>
 
           <main className="mx-auto w-full max-w-[1200px] flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">

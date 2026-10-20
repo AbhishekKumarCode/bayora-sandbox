@@ -13,7 +13,8 @@ type Store = {
   loading: boolean;
   error: string | null;
   lastPollAt: number;
-  connect: (token: string) => Promise<boolean>;
+  connect: (token: string) => Promise<string | null>; // null = ok, else error message
+  recheckHealth: () => Promise<void>;
   disconnect: () => void;
   useDemo: () => void;
   verify: (simulateTamperSeq?: number) => Promise<VerifyResult>;
@@ -79,6 +80,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [source]);
 
+  const recheckHealth = useCallback(async () => {
+    try { const h = await getHealth(); setBrokerOnline(h.ok); setMockMode(h.mockMode); }
+    catch { setBrokerOnline(false); }
+  }, []);
+
   const connect = useCallback(async (token: string) => {
     storeToken(token.trim());
     try {
@@ -89,13 +95,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setError(null);
       setSource("broker");
       setLastPollAt(Date.now());
-      return true;
+      recheckHealth();
+      return null;
     } catch (e) {
       clearToken();
-      setError(e instanceof ForbiddenError ? "That token was rejected by the broker." : `Could not reach the broker: ${e instanceof Error ? e.message : e}`);
-      return false;
+      const msg = e instanceof ForbiddenError
+        ? "The broker rejected that token (403). It must be the AUDIT_TOKEN from the broker's .env, not the red or blue token."
+        : e instanceof Error ? e.message : String(e);
+      setError(msg);
+      return msg;
     }
-  }, []);
+  }, [recheckHealth]);
 
   const disconnect = useCallback(() => {
     clearToken();
@@ -127,8 +137,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<Store>(() => ({
     source, connected, brokerOnline, mockMode, entries, loading, error, lastPollAt,
-    connect, disconnect, useDemo, verify, triggerRun,
-  }), [source, connected, brokerOnline, mockMode, entries, loading, error, lastPollAt, connect, disconnect, useDemo, verify, triggerRun]);
+    connect, disconnect, useDemo, verify, triggerRun, recheckHealth,
+  }), [source, connected, brokerOnline, mockMode, entries, loading, error, lastPollAt, connect, disconnect, useDemo, verify, triggerRun, recheckHealth]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
