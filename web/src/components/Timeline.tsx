@@ -20,7 +20,12 @@ export function AttackCard({ a, index, animate = false }: { a: Attack; index?: n
 
       <div className="mt-4 space-y-3">
         <Line kind="attacker" label="Attacker sent">
-          <span className="text-ink-2">a prompt using <span className="mono text-ink">{a.technique}</span>. The judge is never shown this.</span>
+          {a.prompt ? (
+            <span className="mono whitespace-pre-wrap text-ink">"{a.prompt}"</span>
+          ) : (
+            <span className="text-ink-2">a prompt using <span className="mono text-ink">{a.technique}</span> (prompt not recorded in this log).</span>
+          )}
+          <span className="mt-1 block text-[12px] text-muted">The judge is never shown this.{a.source === "broker" && " Fired by the broker, not the red container."}</span>
         </Line>
         <Line kind="model" label="Model replied">
           {a.error ? (

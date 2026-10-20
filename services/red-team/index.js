@@ -20,14 +20,7 @@ async function waitForBroker() {
   throw new Error("broker never became healthy");
 }
 
-async function run() {
-  console.log("[red-team] waiting for broker...");
-  await waitForBroker();
-  console.log("[red-team] broker is up. Loading attack payloads.");
-
-  const raw = await readFile(new URL("./attacks.json", import.meta.url), "utf-8");
-  const attacks = JSON.parse(raw);
-
+async function fireAll(attacks) {
   for (const attack of attacks) {
     console.log(`[red-team] firing technique="${attack.technique}"`);
     try {
@@ -50,12 +43,37 @@ async function run() {
     }
     await sleep(DELAY_MS);
   }
+}
 
-  console.log("[red-team] all attacks fired. Idling.");
-  // An unresolved Promise alone doesn't keep Node's event loop alive once all
-  // I/O/timers drain — it just exits "successfully". Loop on a real timer instead.
+async function run() {
+  console.log("[red-team] waiting for broker...");
+  await waitForBroker();
+  console.log("[red-team] broker is up. Loading attack payloads.");
+
+  const raw = await readFile(new URL("./attacks.json", import.meta.url), "utf-8");
+  const attacks = JSON.parse(raw);
+
+  await fireAll(attacks);
+  console.log("[red-team] boot run done. Waiting for runs requested from the dashboard.");
+
+  // The dashboard's "Start a run" sets a flag on the broker; we claim it here
+  // so every run, not just the boot one, crosses the real red-net boundary.
   while (true) {
-    await sleep(60_000);
+    try {
+      const res = await fetch(`${BROKER_URL}/run-requested`, { headers: { authorization: `Bearer ${RED_TEAM_TOKEN}` } });
+      if (res.ok) {
+        const { requested } = await res.json();
+        if (requested) {
+          console.log("[red-team] run requested by the dashboard. Firing.");
+          await fireAll(attacks);
+          await fetch(`${BROKER_URL}/run-done`, { method: "POST", headers: { authorization: `Bearer ${RED_TEAM_TOKEN}` } }).catch(() => {});
+          console.log("[red-team] run done.");
+        }
+      }
+    } catch (err) {
+      console.error("[red-team] poll error:", err.message);
+    }
+    await sleep(2000);
   }
 }
 

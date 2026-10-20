@@ -39,6 +39,8 @@ export type AuditEntry = {
   data: {
     attackId?: string;
     technique?: string;
+    prompt?: string;
+    source?: "red-team" | "broker";
     responsePreview?: string;
     response?: string;
     model?: string;
@@ -90,4 +92,26 @@ export async function triggerRun(): Promise<{ status: string }> {
   if (res.status === 401 || res.status === 403) throw new ForbiddenError("bad AUDIT_TOKEN");
   if (!res.ok) throw new Error(json.error || `trigger-run ${res.status}`);
   return json;
+}
+
+export type BrokerConfig = { provider: string; model: string; baseUrl: string | null; mockMode: boolean; systemPrompt: string; runInProgress: boolean };
+export type CatalogAttack = { technique: string; prompt: string };
+
+async function auditGet<T>(path: string): Promise<T> {
+  const res = await safeFetch(`${getBrokerUrl()}${path}`, { headers: authHeaders() });
+  if (res.status === 401 || res.status === 403) throw new ForbiddenError("bad AUDIT_TOKEN");
+  if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.error || `${path} ${res.status}`); }
+  return res.json();
+}
+
+export const getConfig = () => auditGet<BrokerConfig>("/config");
+export const getModels = () => auditGet<{ models: string[]; current: string }>("/models");
+export const getAttackCatalog = () => auditGet<{ attacks: CatalogAttack[] }>("/attacks");
+
+export async function setModel(model: string): Promise<BrokerConfig> {
+  const res = await safeFetch(`${getBrokerUrl()}/config`, { method: "POST", headers: { ...authHeaders(), "content-type": "application/json" }, body: JSON.stringify({ model }) });
+  const j = await res.json().catch(() => ({}));
+  if (res.status === 401 || res.status === 403) throw new ForbiddenError("bad AUDIT_TOKEN");
+  if (!res.ok) throw new Error(j.error || `config ${res.status}`);
+  return j;
 }

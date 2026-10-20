@@ -30,7 +30,9 @@ export const SYSTEM_PROMPT =
   ].join(" ");
 
 const PROVIDER = ANTHROPIC_KEY ? "anthropic" : LLM_BASE_URL ? "openai-compatible" : "mock";
-const MODEL = PROVIDER === "anthropic" ? ANTHROPIC_MODEL : PROVIDER === "openai-compatible" ? LLM_MODEL || "(unset LLM_MODEL)" : "mock";
+// The model under test can be switched at runtime (POST /config); the env value is the default.
+let currentModel = PROVIDER === "anthropic" ? ANTHROPIC_MODEL : PROVIDER === "openai-compatible" ? LLM_MODEL || "(unset LLM_MODEL)" : "mock";
+const MODEL = currentModel;
 
 if (PROVIDER === "mock") {
   console.warn(
@@ -78,7 +80,7 @@ async function anthropicComplete(prompt) {
       signal: t.signal,
       headers: { "content-type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01" },
       body: JSON.stringify({
-        model: ANTHROPIC_MODEL,
+        model: currentModel,
         max_tokens: 400,
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: prompt }],
@@ -87,7 +89,7 @@ async function anthropicComplete(prompt) {
     if (!res.ok) throw apiError(res.status, await res.text());
     const json = await res.json();
     const text = json.content?.map((b) => b.text || "").join("") || "";
-    return { text, mock: false, model: ANTHROPIC_MODEL };
+    return { text, mock: false, model: currentModel };
   } finally {
     t.done();
   }
@@ -103,11 +105,11 @@ async function openaiCompatibleComplete(prompt) {
       signal: t.signal,
       headers,
       body: JSON.stringify({
-        model: LLM_MODEL,
+        model: currentModel,
         max_tokens: 800,
         temperature: 0.7,
         // reasoning models (gpt-oss, qwen3 thinking) otherwise spend the budget thinking
-        ...(/gpt-oss/.test(LLM_MODEL) ? { reasoning_effort: "low" } : {}),
+        ...(/gpt-oss/.test(currentModel) ? { reasoning_effort: "low" } : {}),
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: prompt },
@@ -117,7 +119,7 @@ async function openaiCompatibleComplete(prompt) {
     if (!res.ok) throw apiError(res.status, await res.text());
     const json = await res.json();
     const text = json.choices?.[0]?.message?.content ?? "";
-    return { text: typeof text === "string" ? text : JSON.stringify(text), mock: false, model: LLM_MODEL };
+    return { text: typeof text === "string" ? text : JSON.stringify(text), mock: false, model: currentModel };
   } finally {
     t.done();
   }
@@ -130,4 +132,23 @@ export async function complete(prompt) {
 }
 
 export const isMockMode = () => PROVIDER === "mock";
-export const llmInfo = () => ({ provider: PROVIDER, model: MODEL });
+export const llmInfo = () => ({ provider: PROVIDER, model: currentModel, baseUrl: PROVIDER === "openai-compatible" ? LLM_BASE_URL : PROVIDER === "anthropic" ? "https://api.anthropic.com" : null });
+
+export function setModel(id) {
+  if (PROVIDER === "mock") throw Object.assign(new Error("no model provider configured; set LLM_BASE_URL or ANTHROPIC_API_KEY"), { status: 409 });
+  if (typeof id !== "string" || !/^[A-Za-z0-9._\/:-]{1,120}$/.test(id)) throw Object.assign(new Error("invalid model id"), { status: 400 });
+  currentModel = id;
+  console.log(`[llm] model under test switched to ${id}`);
+  return currentModel;
+}
+
+// Models the configured provider offers (for the dashboard picker).
+export async function listModels() {
+  if (PROVIDER === "anthropic") return ["claude-sonnet-5-5", "claude-haiku-5-5", "claude-opus-5-5"];
+  if (PROVIDER !== "openai-compatible") return [];
+  const headers = LLM_API_KEY ? { authorization: `Bearer ${LLM_API_KEY}` } : {};
+  const res = await fetch(`${LLM_BASE_URL}/models`, { headers });
+  if (!res.ok) throw apiError(res.status, await res.text());
+  const json = await res.json();
+  return (json.data || []).map((m) => m.id).filter((id) => typeof id === "string" && !/whisper|tts|guard|orpheus|embedding/i.test(id)).sort();
+}

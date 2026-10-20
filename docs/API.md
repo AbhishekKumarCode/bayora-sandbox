@@ -8,7 +8,8 @@ All endpoints except `/health` require an `Authorization: Bearer <token>` header
 |---|---|
 | `RED_TEAM_TOKEN` | `POST /submit-attack` |
 | `BLUE_TEAM_TOKEN` | `GET /pending`, `POST /score` |
-| `AUDIT_TOKEN` | `GET /audit`, `GET /verify` |
+| `AUDIT_TOKEN` | `GET /audit`, `GET /verify`, `POST /trigger-run`, `GET /attacks`, `GET /config`, `POST /config`, `GET /models` |
+| `RED_TEAM_TOKEN` (also) | `GET /run-requested`, `POST /run-done` |
 
 A request with the wrong token for a given route — even a *valid* token for a *different* role — receives `403 { "error": "forbidden" }`. This is intentional and tested: the blue-team's own token does not unlock `/audit`.
 
@@ -103,6 +104,16 @@ or
 `reason` is either `"prevHash mismatch"` (an entry was deleted/reordered) or `"data was altered"` (an entry's content doesn't match its stored hash).
 
 ---
+
+## Operator endpoints (`AUDIT_TOKEN`)
+
+- `POST /trigger-run` — start a run. The red container polls `GET /run-requested` and claims it, so the attacks cross the real red-net boundary; if nothing claims it within `RED_CLAIM_WAIT_MS` (6s) the broker fires its own copy and logs `source: "broker"` on each `attack_submitted` entry.
+- `GET /attacks` — the catalog the red room fires: `{ attacks: [{ technique, prompt }] }`.
+- `GET /config` — `{ provider, model, baseUrl, mockMode, systemPrompt, runInProgress }`.
+- `GET /models` — model ids the configured provider offers: `{ models: [...], current }`.
+- `POST /config` body `{ "model": "<id>" }` — switch the model under test at runtime. Takes effect on the next attack. Each `llm_response_received` entry records `model`, so runs against different models stay comparable. `409` if no provider is configured.
+
+`attack_submitted` entries now include `prompt` and `source` (`red-team` or `broker`). Only the audit role can read them; `GET /pending` still omits them.
 
 ## Example: curl walkthrough
 

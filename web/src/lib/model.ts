@@ -3,6 +3,8 @@ import type { AuditEntry, Verdict } from "./api";
 export type Attack = {
   attackId: string;
   technique: string;
+  prompt?: string;
+  source?: "red-team" | "broker";
   seq: number;
   ts: string;
   response?: AuditEntry;
@@ -37,7 +39,7 @@ export function groupAttacks(entries: AuditEntry[]): Attack[] {
     const id = e.data.attackId;
     if (!id) continue;
     if (e.event === "attack_submitted") {
-      const a: Attack = { attackId: id, technique: e.data.technique ?? "unknown", seq: e.seq, ts: e.ts, seal: e };
+      const a: Attack = { attackId: id, technique: e.data.technique ?? "unknown", prompt: e.data.prompt, source: e.data.source, seq: e.seq, ts: e.ts, seal: e };
       byId.set(id, a);
       order.push(a);
       continue;

@@ -1,10 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { useStore, useNow } from "@/lib/store";
 import { overallStats, techniqueLabel, deriveRuns } from "@/lib/model";
 import { Card, Pill, Actor, cx } from "@/components/ui";
 import { Gauge, Cell, Legend, VERDICT_COLOR, HBar } from "@/components/charts";
 import { Heading } from "./Overview";
+import { getAttackCatalog } from "@/lib/api";
 
 type Technique = { id: string; family: string; severity: "high" | "medium" | "low"; summary: string; prompt: string; owasp: string };
 
@@ -28,8 +29,23 @@ export function Library() {
   const [q, setQ] = useState("");
   const [family, setFamily] = useState<string>("All");
   const [sel, setSel] = useState<Technique>(LIBRARY[4]);
-  const families = ["All", ...new Set(LIBRARY.map((t) => t.family))];
-  const list = LIBRARY.filter((t) => (family === "All" || t.family === family) && (t.id.includes(q.toLowerCase()) || t.summary.toLowerCase().includes(q.toLowerCase())));
+  const [catalog, setCatalog] = useState<Technique[] | null>(null);
+  // When a broker is connected, show the prompts it actually fires, not the built-in copy.
+  useEffect(() => {
+    if (s.source !== "broker") { setCatalog(null); return; }
+    let alive = true;
+    getAttackCatalog().then(({ attacks }) => {
+      if (!alive) return;
+      setCatalog(attacks.map((a) => {
+        const known = LIBRARY.find((t) => t.id === a.technique);
+        return { id: a.technique, family: known?.family ?? "Custom", severity: known?.severity ?? "medium", owasp: known?.owasp ?? "LLM01", summary: known?.summary ?? "Custom attack from the broker's catalog.", prompt: a.prompt };
+      }));
+    }).catch(() => alive && setCatalog(null));
+    return () => { alive = false; };
+  }, [s.source]);
+  const ALL = catalog ?? LIBRARY;
+  const families = ["All", ...new Set(ALL.map((t) => t.family))];
+  const list = ALL.filter((t) => (family === "All" || t.family === family) && (t.id.includes(q.toLowerCase()) || t.summary.toLowerCase().includes(q.toLowerCase())));
   const statFor = (id: string) => stats.byTechnique.find((t) => t.technique === id);
   const pctFor = (id: string) => { const st = statFor(id); return st ? Math.round((st.blocked / st.total) * 100) : null; };
 
@@ -37,7 +53,7 @@ export function Library() {
     <div className="space-y-8">
       <div>
         <h1 className="text-[28px] font-semibold tracking-tight sm:text-[32px]">Attack library</h1>
-        <p className="mt-1.5 text-[14px] text-muted">The techniques the red room fires, and how the model has held up against each one.</p>
+        <p className="mt-1.5 text-[14px] text-muted">The techniques the red room fires, and how the model has held up against each one.{catalog ? " Prompts below are read live from the connected broker." : " Connect a broker to see the exact prompts it fires."}</p>
       </div>
 
       {/* Heatmap: technique × run */}
@@ -53,7 +69,7 @@ export function Library() {
               </tr>
             </thead>
             <tbody>
-              {LIBRARY.map((t) => {
+              {ALL.map((t) => {
                 const pct = pctFor(t.id);
                 return (
                   <tr key={t.id} className={cx("cursor-pointer hover:bg-canvas", sel.id === t.id && "bg-brand-soft/60")} onClick={() => setSel(t)}>
