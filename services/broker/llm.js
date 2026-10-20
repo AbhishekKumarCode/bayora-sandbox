@@ -132,7 +132,19 @@ export async function complete(prompt) {
 }
 
 export const isMockMode = () => PROVIDER === "mock";
-export const llmInfo = () => ({ provider: PROVIDER, model: currentModel, baseUrl: PROVIDER === "openai-compatible" ? LLM_BASE_URL : PROVIDER === "anthropic" ? "https://api.anthropic.com" : null });
+// Public (unauthenticated /health): provider kind only, no model, no URL.
+export const llmInfo = () => ({ provider: PROVIDER });
+
+// Operator-only (/config, AUDIT_TOKEN): model and a sanitised base URL
+// (origin + path, never userinfo or query string).
+export function llmDetails() {
+  let baseUrl = null;
+  try {
+    const raw = PROVIDER === "openai-compatible" ? LLM_BASE_URL : PROVIDER === "anthropic" ? "https://api.anthropic.com" : null;
+    if (raw) { const u = new URL(raw); baseUrl = u.origin + u.pathname.replace(/\/+$/, ""); }
+  } catch { baseUrl = null; }
+  return { provider: PROVIDER, model: currentModel, baseUrl };
+}
 
 export function setModel(id) {
   if (PROVIDER === "mock") throw Object.assign(new Error("no model provider configured; set LLM_BASE_URL or ANTHROPIC_API_KEY"), { status: 409 });

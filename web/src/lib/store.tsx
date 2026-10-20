@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ForbiddenError, clearToken, getAudit, getHealth, getStoredToken, storeToken, triggerRun as apiTriggerRun, verifyChain as apiVerify, type AuditEntry, type VerifyResult } from "./api";
+import { ForbiddenError, clearToken, getAudit, getConfig, getHealth, getStoredToken, storeToken, triggerRun as apiTriggerRun, verifyChain as apiVerify, type AuditEntry, type VerifyResult } from "./api";
 import { demoEntries } from "./demo";
 
 export type Source = "demo" | "broker";
@@ -40,9 +40,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let alive = true;
-    getHealth().then((h) => { if (alive) { setBrokerOnline(h.ok); setMockMode(h.mockMode); setModelName(h.mockMode ? null : h.model ?? null); } }).catch(() => alive && setBrokerOnline(false));
+    getHealth().then((h) => { if (alive) { setBrokerOnline(h.ok); setMockMode(h.mockMode); } }).catch(() => alive && setBrokerOnline(false));
     const id = setInterval(() => {
-      getHealth().then((h) => { if (alive) { setBrokerOnline(h.ok); setMockMode(h.mockMode); setModelName(h.mockMode ? null : h.model ?? null); } }).catch(() => alive && setBrokerOnline(false));
+      getHealth().then((h) => { if (alive) { setBrokerOnline(h.ok); setMockMode(h.mockMode); } }).catch(() => alive && setBrokerOnline(false));
     }, 15000);
     return () => { alive = false; clearInterval(id); };
   }, []);
@@ -83,8 +83,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [source]);
 
   const recheckHealth = useCallback(async () => {
-    try { const h = await getHealth(); setBrokerOnline(h.ok); setMockMode(h.mockMode); setModelName(h.mockMode ? null : h.model ?? null); }
+    try { const h = await getHealth(); setBrokerOnline(h.ok); setMockMode(h.mockMode); }
     catch { setBrokerOnline(false); }
+    // model name is operator-only, so it needs the audit token
+    if (getStoredToken()) {
+      try { const c = await getConfig(); setModelName(c.mockMode ? null : c.model); } catch { /* keep last */ }
+    } else {
+      setModelName(null);
+    }
   }, []);
 
   const connect = useCallback(async (token: string) => {

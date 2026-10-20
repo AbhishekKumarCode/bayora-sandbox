@@ -2,7 +2,7 @@ import express from "express";
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { appendEntry, readAllEntries, verifyChain } from "./audit.js";
-import { complete, isMockMode, llmInfo, setModel, listModels, SYSTEM_PROMPT } from "./llm.js";
+import { complete, isMockMode, llmInfo, llmDetails, setModel, listModels, SYSTEM_PROMPT } from "./llm.js";
 
 const RED_TEAM_TOKEN = process.env.RED_TEAM_TOKEN;
 const BLUE_TEAM_TOKEN = process.env.BLUE_TEAM_TOKEN;
@@ -165,12 +165,12 @@ app.get("/attacks", requireToken(AUDIT_TOKEN), async (req, res) => {
 });
 
 app.get("/config", requireToken(AUDIT_TOKEN), (req, res) => {
-  res.json({ ...llmInfo(), mockMode: isMockMode(), systemPrompt: SYSTEM_PROMPT, runInProgress });
+  res.json({ ...llmDetails(), mockMode: isMockMode(), systemPrompt: SYSTEM_PROMPT, runInProgress });
 });
 
 app.get("/models", requireToken(AUDIT_TOKEN), async (req, res) => {
   try {
-    res.json({ models: await listModels(), current: llmInfo().model });
+    res.json({ models: await listModels(), current: llmDetails().model });
   } catch (err) {
     res.status(502).json({ error: err.message });
   }
@@ -179,7 +179,7 @@ app.get("/models", requireToken(AUDIT_TOKEN), async (req, res) => {
 app.post("/config", requireToken(AUDIT_TOKEN), (req, res) => {
   try {
     const model = setModel(req.body?.model);
-    res.json({ ok: true, ...llmInfo(), model });
+    res.json({ ok: true, ...llmDetails(), model });
   } catch (err) {
     res.status(err.status || 500).json({ error: err.message });
   }
