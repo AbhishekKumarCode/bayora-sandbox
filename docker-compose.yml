@@ -4,7 +4,11 @@ services:
     container_name: bayora-broker
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
-      - ANTHROPIC_MODEL=${ANTHROPIC_MODEL:-claude-sonnet-5}
+      - ANTHROPIC_MODEL=${ANTHROPIC_MODEL:-claude-sonnet-5-5}
+      - LLM_BASE_URL=${LLM_BASE_URL:-}
+      - LLM_API_KEY=${LLM_API_KEY:-}
+      - LLM_MODEL=${LLM_MODEL:-}
+      - SYSTEM_PROMPT=${SYSTEM_PROMPT:-}
       - AUDIT_LOG_PATH=/logs/audit.log
       - AUDIT_HMAC_KEY=${AUDIT_HMAC_KEY:?set AUDIT_HMAC_KEY in .env}
       - RED_TEAM_TOKEN=${RED_TEAM_TOKEN:?set RED_TEAM_TOKEN in .env}
@@ -15,6 +19,8 @@ services:
     networks:
       - red-net
       - blue-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # lets LLM_BASE_URL point at a local Ollama
     ports:
       - "127.0.0.1:4000:4000" # host-only (loopback), for the demo dashboard/verify script — not reachable from outside this machine
     cap_drop:

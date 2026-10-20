@@ -40,6 +40,8 @@ export type AuditEntry = {
     attackId?: string;
     technique?: string;
     responsePreview?: string;
+    response?: string;
+    model?: string;
     mock?: boolean;
     verdict?: Verdict;
     confidence?: number;
@@ -57,7 +59,7 @@ async function safeFetch(input: string, init?: RequestInit): Promise<Response> {
   catch { throw new Error(`Could not reach ${getBrokerUrl()}. Is the broker running and the tunnel up? A browser ad-blocker can also block trycloudflare.com.`); }
 }
 
-export async function getHealth(): Promise<{ ok: boolean; mockMode: boolean }> {
+export async function getHealth(): Promise<{ ok: boolean; mockMode: boolean; provider?: string; model?: string }> {
   const res = await safeFetch(`${getBrokerUrl()}/health`);
   if (!res.ok) throw new Error(`health ${res.status}`);
   return res.json();

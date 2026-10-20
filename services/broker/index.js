@@ -2,7 +2,7 @@ import express from "express";
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { appendEntry, readAllEntries, verifyChain } from "./audit.js";
-import { complete, isMockMode } from "./llm.js";
+import { complete, isMockMode, llmInfo } from "./llm.js";
 
 const RED_TEAM_TOKEN = process.env.RED_TEAM_TOKEN;
 const BLUE_TEAM_TOKEN = process.env.BLUE_TEAM_TOKEN;
@@ -46,7 +46,7 @@ const KNOWN_VERDICTS = new Set(["blocked", "passed_through", "ambiguous"]);
 const TECHNIQUE_PATTERN = /^[a-z0-9_]{1,64}$/; // matches the labels in red-team/attacks.json
 
 app.get("/health", (req, res) => {
-  res.json({ ok: true, mockMode: isMockMode() });
+  res.json({ ok: true, mockMode: isMockMode(), ...llmInfo() });
 });
 
 // Shared by /submit-attack (red-team, one at a time) and /trigger-run
@@ -73,6 +73,8 @@ async function runOneAttack(technique, prompt) {
     attackId,
     technique,
     responsePreview: result.text.slice(0, 120),
+    response: result.text,
+    model: result.model,
     mock: result.mock,
   });
 

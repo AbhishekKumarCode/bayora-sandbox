@@ -24,7 +24,7 @@ export function Overview() {
     try { setVerify(await s.verify()); } finally { setVerifying(false); }
   }
 
-  const modelName = s.source === "demo" ? "the demo model" : s.mockMode ? "the mock model" : "the model under test";
+  const modelName = s.source === "demo" ? "the demo model" : s.mockMode ? "the mock model" : s.modelName ? s.modelName : "the model under test";
 
   return (
     <div className="space-y-8">
@@ -132,7 +132,7 @@ export function Overview() {
                       <div className="text-[12px] text-muted">{run ? `Run ${run.index}` : ""} · {fmtAgo(a.ts, now)}</div>
                     </div>
                   </div>
-                  <p className="mono mt-4 flex-1 rounded-[10px] bg-canvas px-3 py-2 text-[12.5px] leading-relaxed text-ink">"{a.response?.data.responsePreview ?? "(no preview)"}"</p>
+                  <p className="mono mt-4 flex-1 rounded-[10px] bg-canvas px-3 py-2 text-[12.5px] leading-relaxed text-ink">"{a.response?.data.response ?? a.response?.data.responsePreview ?? "(no reply recorded)"}"</p>
                   <p className="mt-3 text-[12.5px] text-ink-2"><span className="font-medium text-attack">Judge:</span> {a.verdict?.data.notes || "no notes"} <span className="text-muted">· {Math.round((a.verdict?.data.confidence ?? 0) * 100)}% sure</span></p>
                   {run && <Link to={`/app/runs/${run.id}`} className="mt-3 inline-flex items-center gap-1 text-[13px] font-medium text-brand hover:underline">See the full run <ArrowRight size={13} /></Link>}
                 </Card>

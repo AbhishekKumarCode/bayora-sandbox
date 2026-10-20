@@ -26,7 +26,7 @@ export function AttackCard({ a, index, animate = false }: { a: Attack; index?: n
           {a.error ? (
             <span className="mono text-attack">{a.error.data.error}</span>
           ) : a.response ? (
-            <span className="mono text-ink">"{a.response.data.responsePreview}{(a.response.data.responsePreview?.length ?? 0) >= 120 ? "…" : ""}"</span>
+            <span className="mono whitespace-pre-wrap text-ink">"{a.response.data.response ?? a.response.data.responsePreview}{!a.response.data.response && (a.response.data.responsePreview?.length ?? 0) >= 120 ? "…" : ""}"</span>
           ) : (
             <span className="text-pending">waiting…</span>
           )}

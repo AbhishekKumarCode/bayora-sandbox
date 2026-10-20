@@ -9,6 +9,7 @@ type Store = {
   connected: boolean;          // broker + token working
   brokerOnline: boolean | null; // health probe
   mockMode: boolean;
+  modelName: string | null;
   entries: AuditEntry[];
   loading: boolean;
   error: string | null;
@@ -30,6 +31,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [entries, setEntries] = useState<AuditEntry[]>(() => demoEntries());
   const [brokerOnline, setBrokerOnline] = useState<boolean | null>(null);
   const [mockMode, setMockMode] = useState(false);
+  const [modelName, setModelName] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,9 +40,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let alive = true;
-    getHealth().then((h) => { if (alive) { setBrokerOnline(h.ok); setMockMode(h.mockMode); } }).catch(() => alive && setBrokerOnline(false));
+    getHealth().then((h) => { if (alive) { setBrokerOnline(h.ok); setMockMode(h.mockMode); setModelName(h.mockMode ? null : h.model ?? null); } }).catch(() => alive && setBrokerOnline(false));
     const id = setInterval(() => {
-      getHealth().then((h) => { if (alive) { setBrokerOnline(h.ok); setMockMode(h.mockMode); } }).catch(() => alive && setBrokerOnline(false));
+      getHealth().then((h) => { if (alive) { setBrokerOnline(h.ok); setMockMode(h.mockMode); setModelName(h.mockMode ? null : h.model ?? null); } }).catch(() => alive && setBrokerOnline(false));
     }, 15000);
     return () => { alive = false; clearInterval(id); };
   }, []);
@@ -81,7 +83,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [source]);
 
   const recheckHealth = useCallback(async () => {
-    try { const h = await getHealth(); setBrokerOnline(h.ok); setMockMode(h.mockMode); }
+    try { const h = await getHealth(); setBrokerOnline(h.ok); setMockMode(h.mockMode); setModelName(h.mockMode ? null : h.model ?? null); }
     catch { setBrokerOnline(false); }
   }, []);
 
@@ -136,9 +138,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [source]);
 
   const value = useMemo<Store>(() => ({
-    source, connected, brokerOnline, mockMode, entries, loading, error, lastPollAt,
+    source, connected, brokerOnline, mockMode, modelName, entries, loading, error, lastPollAt,
     connect, disconnect, useDemo, verify, triggerRun, recheckHealth,
-  }), [source, connected, brokerOnline, mockMode, entries, loading, error, lastPollAt, connect, disconnect, useDemo, verify, triggerRun, recheckHealth]);
+  }), [source, connected, brokerOnline, mockMode, modelName, entries, loading, error, lastPollAt, connect, disconnect, useDemo, verify, triggerRun, recheckHealth]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
