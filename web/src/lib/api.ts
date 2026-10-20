@@ -7,9 +7,13 @@ const BROKER_URL = import.meta.env.VITE_BROKER_URL || "http://localhost:4000";
 function getAuditToken(): string {
   let token: string = sessionStorage.getItem("bayora_audit_token") || "";
   if (!token) {
-    // Local dev convenience only — if VITE_AUDIT_TOKEN isn't set (it's
-    // gitignored and never committed), fall back to prompting in-browser.
-    token = import.meta.env.VITE_AUDIT_TOKEN || window.prompt("Enter AUDIT_TOKEN (from your .env file):") || "";
+    // VITE_* vars are inlined into the public JS bundle at build time — so
+    // VITE_AUDIT_TOKEN must NEVER be read in a production build, even if
+    // it's set locally for dev convenience or accidentally added to a
+    // deployment's env vars. In prod, always prompt in-browser instead;
+    // the token then only ever lives in this tab's sessionStorage.
+    const devOnlyToken = import.meta.env.PROD ? undefined : import.meta.env.VITE_AUDIT_TOKEN;
+    token = devOnlyToken || window.prompt("Enter AUDIT_TOKEN (from your .env file):") || "";
     if (token) sessionStorage.setItem("bayora_audit_token", token);
   }
   return token;

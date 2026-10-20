@@ -1,0 +1,8 @@
+.env
+.env.*
+web/.env
+web/.env.*
+services
+scripts
+docs
+logs
