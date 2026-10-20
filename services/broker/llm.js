@@ -104,8 +104,10 @@ async function openaiCompatibleComplete(prompt) {
       headers,
       body: JSON.stringify({
         model: LLM_MODEL,
-        max_tokens: 400,
+        max_tokens: 800,
         temperature: 0.7,
+        // reasoning models (gpt-oss, qwen3 thinking) otherwise spend the budget thinking
+        ...(/gpt-oss/.test(LLM_MODEL) ? { reasoning_effort: "low" } : {}),
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: prompt },

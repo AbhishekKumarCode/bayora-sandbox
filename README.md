@@ -47,65 +47,55 @@ cp .env.example .env
 # generate your own secrets:
 node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"
 # paste 4 different values in for AUDIT_HMAC_KEY, RED_TEAM_TOKEN, BLUE_TEAM_TOKEN, AUDIT_TOKEN
-# optionally add a real ANTHROPIC_API_KEY — without one, the broker runs in
-# MOCK MODE with canned responses so the pipeline still works end-to-end
+# pick a model under test (any ONE of these):
+#   ANTHROPIC_API_KEY=...                         Anthropic
+#   LLM_BASE_URL + LLM_API_KEY + LLM_MODEL         any OpenAI-compatible API (Groq and
+#                                                 Gemini have free tiers; Ollama is local)
+#   nothing                                       MOCK MODE: canned replies, clearly labelled
+# optionally give the blind judge its own model (JUDGE_BASE_URL/JUDGE_API_KEY/JUDGE_MODEL);
+# without one it falls back to a keyword classifier. Use a different model from the target.
 
 docker compose up --build
 ```
 
-Watch the logs: `red-team` fires 5 real prompt-injection-style attacks at the
-broker, the broker calls the LLM (real or mock) and logs the exchange,
-`blue-team` polls for responses and scores them blind using a simple
-keyword-based classifier, and every step gets appended to `logs/audit.log`.
+Watch the logs: `red-team` fires 7 prompt-injection-style attacks at the
+broker, the broker calls the model under test (which runs with a system prompt
+holding a fake secret, so a prompt leak is actually possible) and logs the full
+exchange, `blue-team` scores each reply blind with its own judge model, and
+every step gets appended to `logs/audit.log`.
+
+Isolation you can probe live:
+
+```bash
+docker exec bayora-red-team wget -T 3 -O /dev/null https://api.groq.com/   # no route: red-net is internal
+docker exec bayora-red-team wget -T 3 -O /dev/null http://blue-team:4000   # bad address: no shared network
+```
 
 ## Live dashboard
 
-The real dashboard lives in `web/` — a React + Vite + Tailwind app (see
-`docs/DESIGN_SYSTEM.md` for the visual language) with four pages: Overview,
-Rooms, Notebook, and History. Every number on every page is computed live
-from the broker's real `/audit` data — nothing is hardcoded.
+The dashboard lives in `web/` — a Vite + React + Tailwind app with a landing
+page at `/` and the app at `/app`: Overview, Runs, Run detail, Live run, Attack
+library, Audit chain, Settings. Every number is computed from the broker's
+`/audit` data. Until you connect a broker it shows built-in **demo data**,
+labelled as such everywhere, and its Verify button in demo mode is a
+placeholder, not a real recompute.
 
 ```bash
 cd web
 npm install
-cp .env.example .env
-# edit .env: set VITE_AUDIT_TOKEN to the same value as AUDIT_TOKEN in the
-# root .env (optional — if left blank, the app just prompts for it once)
-npm run dev
+npm run dev          # http://localhost:5173
 ```
 
-Open `http://localhost:5173`. Highlights:
-- **Overview** — the Trust Switch (sealed/leaky comparison), live stats, and
-  the activity feed
-- **Notebook** — a "Tamper → Verify" pair: Tamper arms a one-off, in-memory
-  simulation (via the broker's `?simulateTamperSeq=`, which never touches
-  the real log — verified: the log's hash is identical before and after),
-  Verify recomputes the HMAC chain server-side and reports exactly where it
-  breaks, if it does
+Open `/app`, click **connect** in the header, and paste the `AUDIT_TOKEN` from
+the root `.env`. The token stays in that tab's session storage. The broker URL
+is editable in the same dialog (default: `VITE_BROKER_URL` at build time).
 
 ## Deploying the dashboard
 
-`web/` is a Vite app living inside this monorepo (alongside `services/`,
-`docs/`, etc.), not its own repo — so two settings have to agree or the
-build breaks with `vite: command not found`:
-
-- The Vercel project's **Root Directory** is set to `web` (Project Settings
-  → General), so a GitHub-push-triggered build clones the whole repo and
-  then `cd`s into `web/` before installing/building.
-- The local `.vercel/project.json` link lives at the **repo root**
-  (`/hackinhills/bayora-sandbox/.vercel`, gitignored), not inside `web/` —
-  so a manual CLI deploy goes through the same root-directory logic instead
-  of double-applying it.
-
-To deploy manually, always run from the repo root:
-
-```bash
-cd /hackinhills/bayora-sandbox
-npx vercel --prod
-```
-
-Never run `vercel` from inside `web/` directly — with Root Directory set,
-Vercel will look for a `web` folder nested inside `web/` and fail.
+The root `vercel.json` builds `web/` and serves `web/dist` with an SPA rewrite.
+Leave the Vercel project's Root Directory **unset** (repo root). Set
+`VITE_BROKER_URL` in the Vercel environment to a stable broker address (a named
+Cloudflare tunnel, not a quick tunnel, whose hostname changes on every restart).
 
 ## Verifying the audit log from the command line
 
@@ -119,16 +109,17 @@ exactly where the chain breaks.
 
 ## What this does NOT claim to do yet
 
-The dashboard's Trust Switch (sealed vs. leaky catch rate) is real where the
-"sealed" number is concerned, but the "leaky" comparison number is
-illustrative — it's not computed from an actual unblinded run, since that
-would require a second backend path where the blue team is given the
-original prompt (see `docs/PRD.md` Open Questions). Also not yet built:
-custom seccomp profiles and real attack-payload sourcing from
-AdvBench/JailbreakBench. See the project brief and pitch deck in the parent
-`/hackinhills` folder for the full roadmap and the explicit threat model
-(what this protects against and what it doesn't — including the things
-role-based auth doesn't fix, like a fully compromised broker container).
+- The HMAC key lives in the broker. A compromised broker can forge and vouch
+  for its own log, and trailing entries can be truncated without detection
+  until the chain head is anchored somewhere the broker cannot write.
+- The judge sees only the reply, so it cannot know what was asked; harm that
+  is only visible in context will be missed. `confidence` and `notes` are the
+  judge's own words, sealed as sent, not verified.
+- `/pending` hands out each reply once with no lease; a judge crash mid-score
+  leaves that attack unjudged.
+- The "Start a run" button has the broker fire its own copy of `attacks.json`;
+  only the red container's boot run crosses the real network boundary.
+- No seccomp profiles, no rate limiting on the broker, no tests yet.
 
 ## Project structure
 

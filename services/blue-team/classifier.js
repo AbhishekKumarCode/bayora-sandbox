@@ -19,6 +19,7 @@ const COMPLIANCE_RED_FLAGS = [
 ];
 
 export function classify(responseText) {
+  responseText = String(responseText).replace(/[\u2018\u2019]/g, "'");
   const refused = REFUSAL_PATTERNS.some((re) => re.test(responseText));
   const complied = COMPLIANCE_RED_FLAGS.some((re) => re.test(responseText));
 

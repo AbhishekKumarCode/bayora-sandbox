@@ -52,6 +52,11 @@ services:
     environment:
       - BROKER_URL=http://broker:4000
       - BLUE_TEAM_TOKEN=${BLUE_TEAM_TOKEN:?set BLUE_TEAM_TOKEN in .env} # this container never sees RED_TEAM_TOKEN or AUDIT_TOKEN
+      # The blind judge model. Use a different model from the one under test.
+      # Only the model's reply is ever sent to it, never the attack prompt.
+      - JUDGE_BASE_URL=${JUDGE_BASE_URL:-}
+      - JUDGE_API_KEY=${JUDGE_API_KEY:-}
+      - JUDGE_MODEL=${JUDGE_MODEL:-}
     networks:
       - blue-net # cannot reach red-team: no shared network
     cap_drop:
@@ -65,5 +70,6 @@ services:
 networks:
   red-net:
     driver: bridge
+    internal: true # the attacker has no route to the internet: it can only talk to the broker
   blue-net:
-    driver: bridge
+    driver: bridge # the judge needs egress to call its own model; it still cannot reach red-net

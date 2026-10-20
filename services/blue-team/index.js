@@ -1,4 +1,4 @@
-import { classify } from "./classifier.js";
+import { judge, judgeInfo } from "./judge.js";
 
 const BROKER_URL = process.env.BROKER_URL || "http://broker:4000";
 const POLL_MS = Number(process.env.POLL_INTERVAL_MS || 1500);
@@ -24,23 +24,29 @@ async function waitForBroker() {
 async function pollLoop() {
   console.log("[blue-team] waiting for broker...");
   await waitForBroker();
-  console.log("[blue-team] broker is up. Polling for responses to evaluate (blind — no prompt visibility).");
+  const info = judgeInfo();
+  console.log(`[blue-team] broker is up. Judge: ${info.kind} (${info.model}). Polling for responses (blind — no prompt visibility).`);
 
   while (true) {
     try {
       const res = await fetch(`${BROKER_URL}/pending`, { headers: authHeaders });
+      if (!res.ok) throw new Error(`/pending ${res.status}`);
       const { item } = await res.json();
 
       if (item) {
         const { attackId, response } = item;
-        const { verdict, confidence, notes } = classify(response);
+        const { verdict, confidence, notes } = await judge(response);
         console.log(`[blue-team] attackId=${attackId} verdict=${verdict} (confidence=${confidence})`);
 
-        await fetch(`${BROKER_URL}/score`, {
+        const scored = await fetch(`${BROKER_URL}/score`, {
           method: "POST",
           headers: { "content-type": "application/json", ...authHeaders },
           body: JSON.stringify({ attackId, verdict, confidence, notes }),
         });
+        if (!scored.ok) {
+          const body = await scored.text().catch(() => "");
+          console.error(`[blue-team] /score rejected attackId=${attackId}: ${scored.status} ${body.slice(0, 120)}`);
+        }
       }
     } catch (err) {
       console.error("[blue-team] poll error:", err.message);
