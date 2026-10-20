@@ -83,13 +83,10 @@ export default function Layout() {
         <div className="mt-auto flex flex-col gap-2 px-1">
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <span
-              className={`relative flex h-1.5 w-1.5 ${connected ? "" : "opacity-40"}`}
-            >
-              {connected && (
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-caught opacity-75" />
-              )}
-              <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${connected ? "bg-caught" : "bg-destructive"}`} />
-            </span>
+              className={`relative inline-flex rounded-full h-1.5 w-1.5 ${
+                connected ? "bg-caught pulse-ring" : "bg-destructive"
+              }`}
+            />
             {connected === null ? "Connecting…" : connected ? "Broker live" : "Broker unreachable"}
           </div>
           <div className="text-xs text-muted-foreground">Rooms sealed</div>

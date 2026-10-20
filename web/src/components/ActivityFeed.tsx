@@ -57,7 +57,10 @@ export default function ActivityFeed({ entries, limit }: { entries: AuditEntry[]
             return (
               <li
                 key={entry.seq}
-                className={`flex items-center gap-3 py-2 text-sm ${i === 0 ? "bg-accent/40 -mx-2 px-2 rounded" : ""}`}
+                className={`flex items-center gap-3 py-2 text-sm ${
+                  i === 0 ? "bg-accent/40 -mx-2 px-2 rounded" : ""
+                }`}
+                style={i === 0 ? { animation: "fade-up 0.3s cubic-bezier(0.2, 0.7, 0.2, 1) both" } : undefined}
               >
                 <span className="font-mono text-xs text-muted-foreground w-[70px] shrink-0">
                   {new Date(entry.ts).toLocaleTimeString([], { hour12: false })}

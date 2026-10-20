@@ -22,7 +22,7 @@ type Props = {
 
 export default function RoomCard({ emoji, title, description, agentLabel, tone }: Props) {
   return (
-    <div className={`bg-card border rounded-card card-shadow p-4 ${toneBorder[tone]}`}>
+    <div className={`bg-card border rounded-card card-shadow card-hover p-4 ${toneBorder[tone]}`}>
       <div className="flex items-center gap-2 mb-1">
         <span className="text-lg leading-none">{emoji}</span>
         <h3 className={`font-display font-semibold text-sm ${toneText[tone]}`}>{title}</h3>

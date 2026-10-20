@@ -32,7 +32,7 @@ export default function History() {
   const hasData = entries.length > 0;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 stagger">
       <div>
         <h1 className="font-display font-bold text-2xl tracking-tight">History</h1>
         <p className="text-sm text-muted-foreground mt-1 max-w-xl">

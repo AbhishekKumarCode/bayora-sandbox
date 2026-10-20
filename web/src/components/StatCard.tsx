@@ -31,7 +31,7 @@ function AnimatedNumber({ value }: { value: string | number }) {
 
 export default function StatCard({ label, value, caption, tone = "default" }: Props) {
   return (
-    <div className="bg-card border border-border rounded-card card-shadow px-5 py-4 flex-1 min-w-0 transition-shadow hover:shadow-md">
+    <div className="bg-card border border-border rounded-card card-shadow card-hover px-5 py-4 flex-1 min-w-0">
       <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">{label}</div>
       <div className={`font-display font-bold text-3xl tabular-nums ${toneClasses[tone]}`}>
         <AnimatedNumber value={value} />

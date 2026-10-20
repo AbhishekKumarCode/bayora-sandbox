@@ -12,7 +12,7 @@ export default function TrustSwitch({ realCatchRate, illustrativeLeakyRate }: Pr
 
   return (
     <div
-      className={`bg-card border rounded-card card-shadow p-5 transition-colors ${
+      className={`bg-card border rounded-card card-shadow card-hover p-5 transition-colors ${
         sealed ? "border-caught/40" : "border-leak/40"
       }`}
     >
@@ -36,8 +36,16 @@ export default function TrustSwitch({ realCatchRate, illustrativeLeakyRate }: Pr
       <div className={`font-display font-bold text-4xl ${sealed ? "text-caught" : "text-leak"}`}>
         {shown}%
       </div>
-      <div className="text-xs text-muted-foreground mt-1">
+      <div className="text-xs text-muted-foreground mt-1 mb-3">
         {sealed ? "Sealed — this is the real number" : "Leaky (illustrative) — looks safe, isn't"}
+      </div>
+
+      <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
+        <div
+          key={`${sealed}-${shown}`}
+          className={`h-full rounded-full grow ${sealed ? "bg-caught" : "bg-leak"}`}
+          style={{ width: `${shown}%` }}
+        />
       </div>
 
       <div className="mt-4 pt-3 border-t border-border text-xs text-muted-foreground">
