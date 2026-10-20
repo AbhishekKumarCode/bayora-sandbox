@@ -11,13 +11,29 @@ const navItems = [
 
 export default function Layout() {
   const [mockMode, setMockMode] = useState<boolean | null>(null);
+  const [connected, setConnected] = useState<boolean | null>(null);
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
 
   useEffect(() => {
-    getHealth()
-      .then((h) => setMockMode(h.mockMode))
-      .catch(() => setMockMode(null));
+    let cancelled = false;
+    function poll() {
+      getHealth()
+        .then((h) => {
+          if (cancelled) return;
+          setMockMode(h.mockMode);
+          setConnected(true);
+        })
+        .catch(() => {
+          if (!cancelled) setConnected(false);
+        });
+    }
+    poll();
+    const id = setInterval(poll, 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
   }, []);
 
   async function handleStartRun() {
@@ -65,6 +81,17 @@ export default function Layout() {
         </div>
 
         <div className="mt-auto flex flex-col gap-2 px-1">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span
+              className={`relative flex h-1.5 w-1.5 ${connected ? "" : "opacity-40"}`}
+            >
+              {connected && (
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-caught opacity-75" />
+              )}
+              <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${connected ? "bg-caught" : "bg-destructive"}`} />
+            </span>
+            {connected === null ? "Connecting…" : connected ? "Broker live" : "Broker unreachable"}
+          </div>
           <div className="text-xs text-muted-foreground">Rooms sealed</div>
           {mockMode !== null && (
             <span

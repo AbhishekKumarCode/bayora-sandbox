@@ -12,9 +12,20 @@ export default function History() {
   const [entries, setEntries] = useState<AuditEntry[]>([]);
 
   useEffect(() => {
-    getAudit()
-      .then(({ entries }) => setEntries(entries))
-      .catch(() => {});
+    let cancelled = false;
+    function poll() {
+      getAudit()
+        .then(({ entries }) => {
+          if (!cancelled) setEntries(entries);
+        })
+        .catch(() => {});
+    }
+    poll();
+    const id = setInterval(poll, 2000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
   }, []);
 
   const stats = computeStats(entries);

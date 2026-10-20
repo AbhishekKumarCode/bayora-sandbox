@@ -5,6 +5,7 @@ import StatCard from "../components/StatCard";
 import TrustSwitch from "../components/TrustSwitch";
 import ActivityFeed from "../components/ActivityFeed";
 import RoomCard from "../components/RoomCard";
+import AttackPipeline from "../components/AttackPipeline";
 
 export default function Overview() {
   const [entries, setEntries] = useState<AuditEntry[]>([]);
@@ -68,6 +69,8 @@ export default function Overview() {
           />
         </div>
       </div>
+
+      <AttackPipeline entries={entries} />
 
       <ActivityFeed entries={entries} limit={8} />
 

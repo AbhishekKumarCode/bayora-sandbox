@@ -87,6 +87,32 @@ export default function Notebook() {
           </span>
         </div>
 
+        {entries.length > 0 && (
+          <div>
+            <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">
+              Chain — each link's hash depends on the one before it
+            </div>
+            <div className="flex items-center gap-1 overflow-x-auto pb-1">
+              {entries.slice(-24).map((e) => {
+                const isBroken = !!result && !result.ok && e.seq === result.brokenAtSeq;
+                return (
+                  <div
+                    key={e.seq}
+                    title={`seq ${e.seq} · ${e.hash.slice(0, 12)}…`}
+                    className={`shrink-0 font-mono text-[10px] px-2 py-1 rounded border transition-colors ${
+                      isBroken
+                        ? "bg-destructive/10 border-destructive text-destructive animate-pulse"
+                        : "bg-secondary border-border text-muted-foreground"
+                    }`}
+                  >
+                    {e.hash.slice(0, 6)}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {result && (
           <div
             className={`text-sm rounded-card px-4 py-3 border ${
