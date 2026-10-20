@@ -224,6 +224,22 @@ function miniArchitecture() {
     <div class="arch-node arch-defender"><div class="node-cube blue-cube">⬢</div><strong>Defender Room</strong><span>Safety agent</span><em>ISOLATED</em></div>
     <div class="arch-lock lock-one">♙</div><div class="arch-lock lock-two">♙</div><div class="arch-caption"><span class="dot green"></span> Separate execution boundaries · No cross-tenant access</div></div>`;
 }
+function architectureFull() {
+  return `<div class="architecture-full"><div class="arch-grid"></div><div class="arch-connection red-line"></div><div class="arch-connection blue-line"></div>
+    <div class="arch-node arch-attacker"><div class="node-cube red-cube">◎</div><strong>Attacker Room</strong><span>Fires a real adversarial prompt</span><em>ISOLATED</em></div>
+    <div class="arch-node arch-model"><div class="node-cube purple-cube">⬡</div><strong>Model under test</strong><span>Answers — unaware it's being tested</span><em>ISOLATED</em></div>
+    <div class="arch-node arch-defender"><div class="node-cube blue-cube">⬢</div><strong>Defender Room</strong><span>Scores the answer, never the attack</span><em>ISOLATED</em></div>
+    <div class="arch-lock lock-one">♙</div><div class="arch-lock lock-two">♙</div>
+    <div class="arch-caption"><span class="dot green"></span> Separate Docker networks · Broker-mediated only · No cross-tenant access</div></div>`;
+}
+function howItWorks() {
+  const steps = [
+    ["1", "Attack", "A red-team agent fires a real adversarial prompt at the model under test."],
+    ["2", "Evaluate blind", "A separate judge sees only the model's answer — never the attack — and scores it."],
+    ["3", "Seal the record", "Every step is written to a hash-chained log. Edit one line, and Verify catches it."],
+  ];
+  return `<div class="how-steps">${steps.map(([n, title, body], i) => `<div class="how-step"><span class="how-num">${n}</span><div><b>${title}</b><p>${body}</p></div></div>${i < steps.length - 1 ? '<div class="how-arrow">→</div>' : ""}`).join("")}</div>`;
+}
 function livePipelineArch() {
   return `<div class="live-pipeline-arch" id="livePipelineArch"><div class="arch-grid"></div>
     <div class="arch-connection live-red-line"><span class="data-pulse" id="pulseAM"></span></div>
@@ -277,7 +293,22 @@ function overview() {
   const stats = computeStats(state.entries);
   const recent = recentFromEntries();
   const dist = techniqueDistribution();
-  return `<section class="hero-panel"><div class="hero-copy"><div class="hero-kicker">✧ TRUST, MADE VERIFIABLE</div><h2>Test the limits.<br><span>Make AI safer.</span></h2><p>Run adversarial evaluations in a controlled environment. Understand what failed, what held, and why.</p><div class="hero-actions"><button class="btn btn-dark" data-action="open-run">▶ Start new run　→</button><button class="btn btn-secondary" data-page="testing-rooms">View testing rooms　→</button></div><div class="hero-footnote">⬡ Isolated by design <span></span> Tamper-evident by default</div></div>${miniArchitecture()}</section>
+  const pct = Math.max(0, Math.min(100, stats.catchRate));
+  return `<section class="hero-panel-v2">
+    <div class="hero-copy">
+      <div class="hero-kicker">✧ TRUST, MADE VERIFIABLE</div>
+      <h2>Is your AI<br><span>actually safe?</span></h2>
+      <p>A red-team agent attacks the model. A separate judge scores the answer blind — it never sees the attack. Every step is sealed in a tamper-evident log, so the result can't be rigged after the fact.</p>
+      <div class="hero-actions"><button class="btn btn-dark" data-action="open-run">▶ Start new run</button><button class="btn btn-secondary" data-page="testing-rooms">See how it's isolated →</button></div>
+    </div>
+    <div class="hero-trust">
+      <div class="hero-ring" style="background:conic-gradient(#1db97f 0 ${pct}%,#e7ecfa ${pct}%)"><span class="hero-ring-value">${pct}%</span></div>
+      <div class="hero-ring-label">Real catch rate</div>
+      <div class="hero-ring-sub">${stats.caught} of ${stats.attacksTested} real attacks blocked this session — blind-scored, not self-reported</div>
+    </div>
+  </section>
+  <section class="card arch-card"><div class="card-header"><div><h3>How the sandbox is wired</h3><p>Three isolated rooms, one broker, zero shortcuts.</p></div><span class="inline-good"><span class="dot ${state.connected ? "green" : ""}"></span>${state.connected ? "Live" : "Offline"}</span></div>${architectureFull()}</section>
+  ${howItWorks()}
   <div class="metric-grid">${metric("◎","Attacks tested",stats.attacksTested,`Across ${dist.length} techniques`,"red")}${metric("⬡","Attacks caught",stats.caught,`${stats.catchRate}% catch rate`,"blue")}${metric("⛨","Gap if unsealed",`${stats.illustrativeLeakyRate - stats.catchRate} pts`,"Illustrative — see Settings","purple")}${metric("▣","Verdicts scored",`${stats.verdictsSoFar}/${stats.attacksTested}`,stats.attacksTested ? `${Math.round((stats.verdictsSoFar/stats.attacksTested)*100)}% evaluated` : "0% evaluated","green")}</div>
   <div class="overview-grid">
     <section class="card health-card"><div class="card-header"><div><h3>Broker connection</h3><p>Live status of the real backend this dashboard talks to.</p></div><span class="inline-good"><span class="dot ${state.connected ? "green" : ""}"></span>${state.connected === null ? "Connecting…" : state.connected ? "Broker reachable" : "Broker unreachable"}</span></div><div class="resource-grid">${resource("Mode",state.mockMode ? 0 : 100,state.mockMode ? "Mock LLM responses" : "Live LLM API","orange","◉")}${resource("Attacks run",Math.min(100,stats.attacksTested*5),`${stats.attacksTested} total`,"blue","▣")}${resource("Catch rate",stats.catchRate,"blind evaluation","green","⌁")}${resource("Scored",stats.attacksTested ? Math.round((stats.verdictsSoFar/stats.attacksTested)*100) : 0,`${stats.verdictsSoFar} / ${stats.attacksTested}`,"purple","▤")}</div></section>
