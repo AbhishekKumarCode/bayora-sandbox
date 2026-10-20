@@ -1,13 +1,24 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { LayoutGrid, DoorOpen, NotebookPen, History as HistoryIcon, Play } from "lucide-react";
 import { getHealth, triggerRun } from "../lib/api";
 
-const navItems = [
-  { to: "/", label: "Overview", end: true },
-  { to: "/rooms", label: "Rooms" },
-  { to: "/notebook", label: "Notebook" },
-  { to: "/history", label: "History" },
+const NAV = [
+  { to: "/", label: "Overview", icon: LayoutGrid, end: true },
+  { to: "/rooms", label: "Rooms", icon: DoorOpen },
+  { to: "/notebook", label: "Notebook", icon: NotebookPen },
+  { to: "/history", label: "History", icon: HistoryIcon },
 ];
+
+function Mark() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden>
+      <rect width="32" height="32" rx="8" fill="#4f46e5" />
+      <path d="M10 21 L16 10 L22 21 Z" fill="none" stroke="#fff" strokeWidth="2" strokeLinejoin="round" opacity="0.9" />
+      <circle cx="16" cy="17" r="2" fill="#fff" />
+    </svg>
+  );
+}
 
 export default function Layout() {
   const [mockMode, setMockMode] = useState<boolean | null>(null);
@@ -49,39 +60,37 @@ export default function Layout() {
   }
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground">
-      <aside className="w-60 shrink-0 border-r border-border flex flex-col py-5 px-4 gap-6">
-        <div className="flex items-center gap-2 px-1">
-          <div className="w-7 h-7 rounded-full bg-primary text-primary-foreground grid place-items-center font-display font-bold text-sm">
-            B
-          </div>
-          <span className="font-display font-bold text-[15px] tracking-tight">Bayora Sandbox</span>
+    <div className="flex min-h-screen">
+      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col bg-ink2 px-3 py-4 text-slate-300 md:flex">
+        <div className="flex items-center gap-2.5 px-3 pb-5 pt-1">
+          <Mark />
+          <span className="font-display text-lg font-semibold text-white tracking-tight">Bayora Sandbox</span>
         </div>
 
-        <div className="flex flex-col gap-1">
-          <span className="px-3 text-[11px] uppercase tracking-wide text-muted-foreground mb-1">
-            Workspace
-          </span>
-          {navItems.map((item) => (
+        <nav className="space-y-0.5">
+          {NAV.map(({ to, label, icon: Icon, end }) => (
             <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
+              key={to}
+              to={to}
+              end={end}
               className={({ isActive }) =>
-                `px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  isActive
-                    ? "bg-accent text-foreground"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent/60"
+                `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                  isActive ? "bg-white/10 text-white" : "text-slate-300 hover:bg-white/5 hover:text-white"
                 }`
               }
             >
-              {item.label}
+              {({ isActive }) => (
+                <>
+                  <Icon size={17} className={isActive ? "text-indigo-300" : ""} />
+                  {label}
+                </>
+              )}
             </NavLink>
           ))}
-        </div>
+        </nav>
 
-        <div className="mt-auto flex flex-col gap-2 px-1">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <div className="mt-auto flex flex-col gap-2 px-3 pt-4 border-t border-white/10">
+          <div className="flex items-center gap-1.5 text-xs text-slate-400">
             <span
               className={`relative inline-flex rounded-full h-1.5 w-1.5 ${
                 connected ? "bg-caught pulse-ring" : "bg-destructive"
@@ -89,13 +98,10 @@ export default function Layout() {
             />
             {connected === null ? "Connecting…" : connected ? "Broker live" : "Broker unreachable"}
           </div>
-          <div className="text-xs text-muted-foreground">Rooms sealed</div>
           {mockMode !== null && (
             <span
               className={`self-start text-[11px] font-mono px-2 py-0.5 rounded-full border ${
-                mockMode
-                  ? "border-leak text-leak bg-leak-soft"
-                  : "border-caught text-caught bg-caught-soft"
+                mockMode ? "border-leak text-leak bg-leak-soft" : "border-caught text-caught bg-caught-soft"
               }`}
             >
               {mockMode ? "Mock mode" : "Live API"}
@@ -104,20 +110,25 @@ export default function Layout() {
         </div>
       </aside>
 
-      <div className="flex-1 flex flex-col">
-        <header className="h-14 border-b border-border flex items-center justify-between px-6">
-          <div className="text-sm text-muted-foreground">
-            {startError && <span className="text-destructive">{startError}</span>}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background/90 px-4 py-3 backdrop-blur md:px-8">
+          <div className="min-w-0 flex-1 md:hidden flex items-center gap-2">
+            <Mark />
+            <span className="font-display font-semibold tracking-tight">Bayora Sandbox</span>
           </div>
-          <button
-            onClick={handleStartRun}
-            disabled={starting}
-            className="font-display font-semibold text-sm bg-primary text-primary-foreground px-4 py-1.5 rounded-lg hover:opacity-90 disabled:opacity-50 transition-opacity"
-          >
-            {starting ? "Running…" : "Start run"}
-          </button>
+          <div className="ml-auto flex shrink-0 items-center gap-3">
+            {startError && <span className="text-xs text-destructive">{startError}</span>}
+            <button
+              onClick={handleStartRun}
+              disabled={starting}
+              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-indigo-700 disabled:opacity-50"
+            >
+              <Play size={15} />
+              {starting ? "Running…" : "Start run"}
+            </button>
+          </div>
         </header>
-        <main className="flex-1 p-6 max-w-5xl w-full mx-auto">
+        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 md:px-8 md:py-8">
           <Outlet />
         </main>
       </div>

@@ -5,31 +5,37 @@
   --font-mono: "Geist Mono", ui-monospace, monospace;
   --font-display: "Bricolage Grotesque", "Geist", sans-serif;
 
-  --color-background: oklch(98.5% 0.006 85);
-  --color-foreground: oklch(22% 0.015 60);
-  --color-muted-foreground: oklch(52% 0.015 60);
-  --color-card: oklch(100% 0 0);
-  --color-border: oklch(91% 0.01 80);
-  --color-input: oklch(90% 0.01 80);
-  --color-primary: oklch(24% 0.02 60);
-  --color-primary-foreground: oklch(98% 0.006 85);
-  --color-secondary: oklch(95.5% 0.008 85);
-  --color-muted: oklch(95.5% 0.008 85);
-  --color-accent: oklch(94% 0.012 85);
+  --color-background: #f3f5fa;
+  --color-foreground: #0f172a;
+  --color-muted-foreground: #64748b;
+  --color-card: #ffffff;
+  --color-border: #e2e8f0;
+  --color-input: #e2e8f0;
+  --color-primary: #4f46e5;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #f1f5f9;
+  --color-muted: #f1f5f9;
+  --color-accent: #eef0ff;
 
-  --color-attacker: oklch(60% 0.16 25);
-  --color-attacker-soft: oklch(96% 0.03 25);
-  --color-defender: oklch(55% 0.11 200);
-  --color-defender-soft: oklch(96% 0.025 200);
-  --color-caught: oklch(56% 0.12 165);
-  --color-caught-soft: oklch(95% 0.04 165);
-  --color-leak: oklch(70% 0.15 60);
-  --color-leak-soft: oklch(96% 0.03 60);
+  --color-ink: #151a33;
+  --color-ink2: #0f1226;
+  --color-brand: #4f46e5;
+  --color-brand-soft: #eef0ff;
+  --color-hero: #241e5c;
 
-  --color-destructive: oklch(60% 0.2 28);
-  --color-ring: oklch(56% 0.12 165);
+  --color-attacker: #dc2626;
+  --color-attacker-soft: #fef2f2;
+  --color-defender: #4f46e5;
+  --color-defender-soft: #eef0ff;
+  --color-caught: #16a34a;
+  --color-caught-soft: #f0fdf4;
+  --color-leak: #d97706;
+  --color-leak-soft: #fffbeb;
 
-  --radius-card: 0.75rem;
+  --color-destructive: #dc2626;
+  --color-ring: #4f46e5;
+
+  --radius-card: 1rem;
 }
 
 body {

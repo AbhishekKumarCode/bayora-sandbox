@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { AuditEntry } from "../lib/api";
+import { Card } from "./ui";
 
 type Pulse = { id: number; stage: "attacker" | "model" | "defender"; kind?: "caught" | "leak" | "unsure" };
 
@@ -51,7 +52,7 @@ export default function AttackPipeline({ entries }: { entries: AuditEntry[] }) {
   }, [entries]);
 
   return (
-    <div className="bg-card border border-border rounded-card card-shadow p-5">
+    <Card>
       <div className="flex items-center justify-between mb-5">
         <h2 className="font-display font-semibold text-sm">Live pipeline</h2>
         <span className="flex items-center gap-1.5 text-[11px] font-mono text-muted-foreground">
@@ -103,6 +104,6 @@ export default function AttackPipeline({ entries }: { entries: AuditEntry[] }) {
       <p className="text-[11px] text-muted-foreground text-center mt-4">
         Every dot above is a real event from the broker's audit log, polled every 2s — nothing here is canned.
       </p>
-    </div>
+    </Card>
   );
 }

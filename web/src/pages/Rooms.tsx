@@ -1,4 +1,5 @@
 import RoomCard from "../components/RoomCard";
+import { Card, PageHead } from "../components/ui";
 
 const features = [
   { title: "Separate keys", body: "Each room signs with its own key — nobody can act as a role it isn't." },
@@ -10,13 +11,10 @@ const features = [
 export default function Rooms() {
   return (
     <div className="flex flex-col gap-6 stagger">
-      <div>
-        <h1 className="font-display font-bold text-2xl tracking-tight">Rooms</h1>
-        <p className="text-sm text-muted-foreground mt-1 max-w-xl">
-          Choose the attacker, defender, and model under test — each with its own private key. This
-          is enforced by separate Docker networks, not just a convention.
-        </p>
-      </div>
+      <PageHead
+        title="Rooms"
+        sub="Choose the attacker, defender, and model under test — each with its own private key. This is enforced by separate Docker networks, not just a convention."
+      />
 
       <div>
         <h2 className="font-display font-semibold text-sm mb-3">Set up</h2>
@@ -45,7 +43,7 @@ export default function Rooms() {
         </div>
       </div>
 
-      <div className="bg-card border border-border rounded-card card-shadow p-5">
+      <Card>
         <div className="flex items-center gap-2 mb-2">
           <span className="text-lg">🚪</span>
           <h2 className="font-display font-semibold text-sm">The Hallway</h2>
@@ -54,21 +52,21 @@ export default function Rooms() {
           Attack → model → answer only → defender. Every step is logged. The defender never sees the
           question — that's what makes the verdict trustworthy rather than rehearsed.
         </p>
-      </div>
+      </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {features.map((f) => (
-          <div key={f.title} className="bg-card border border-border rounded-card p-4">
+          <Card key={f.title} className="!p-4">
             <h3 className="font-display font-semibold text-sm mb-1">{f.title}</h3>
             <p className="text-xs text-muted-foreground">{f.body}</p>
-          </div>
+          </Card>
         ))}
       </div>
 
-      <div className="bg-card border border-border rounded-card p-4 text-xs text-muted-foreground">
+      <Card className="!p-4 text-xs text-muted-foreground">
         Want the full list of what this setup protects against — and what it honestly doesn't?
         See <code className="font-mono">docs/THREAT_MODEL.md</code> in the repo.
-      </div>
+      </Card>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import type { AuditEntry } from "../lib/api";
+import { Card } from "./ui";
 
 const KNOWN_VERDICTS = new Set(["blocked", "passed_through", "ambiguous"]);
 
@@ -46,7 +47,7 @@ export default function ActivityFeed({ entries, limit }: { entries: AuditEntry[]
   const shown = [...entries].reverse().slice(0, limit ?? entries.length);
 
   return (
-    <div className="bg-card border border-border rounded-card card-shadow p-5">
+    <Card>
       <h2 className="font-display font-semibold text-sm mb-3">What just happened</h2>
       {shown.length === 0 ? (
         <p className="text-sm text-muted-foreground">Every event will be written here, chained to the one before.</p>
@@ -74,6 +75,6 @@ export default function ActivityFeed({ entries, limit }: { entries: AuditEntry[]
           })}
         </ul>
       )}
-    </div>
+    </Card>
   );
 }

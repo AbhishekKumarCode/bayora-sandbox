@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { getAudit, verifyChain, type AuditEntry, type VerifyResult } from "../lib/api";
 import { roomOf } from "../lib/stats";
 import ActivityFeed from "../components/ActivityFeed";
+import { Card, PageHead } from "../components/ui";
 
 const roomCounterLabels: Record<ReturnType<typeof roomOf>, string> = {
   attacker: "🎯 Attacker",
@@ -55,15 +56,12 @@ export default function Notebook() {
 
   return (
     <div className="flex flex-col gap-6 stagger">
-      <div>
-        <h1 className="font-display font-bold text-2xl tracking-tight">Notebook</h1>
-        <p className="text-sm text-muted-foreground mt-1 max-w-xl">
-          Each line is sealed with a fingerprint of the line before it. Change one word, and Verify
-          points straight at the altered line — recomputed server-side, not just displayed.
-        </p>
-      </div>
+      <PageHead
+        title="Notebook"
+        sub="Each line is sealed with a fingerprint of the line before it. Change one word, and Verify points straight at the altered line — recomputed server-side, not just displayed."
+      />
 
-      <div className="bg-card border border-border rounded-card card-shadow p-5 flex flex-col gap-4">
+      <Card className="flex flex-col gap-4">
         <div className="flex items-center gap-3 flex-wrap">
           <button
             onClick={() => setTamperArmed((t) => !t)}
@@ -126,14 +124,14 @@ export default function Notebook() {
               : `✗ Chain broken at seq=${result.brokenAtSeq} — ${result.reason}.`}
           </div>
         )}
-      </div>
+      </Card>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {(Object.keys(roomCounterLabels) as (keyof typeof roomCounterLabels)[]).map((room) => (
-          <div key={room} className="bg-card border border-border rounded-card px-4 py-3">
+          <Card key={room} className="!px-4 !py-3">
             <div className="text-xs text-muted-foreground">{roomCounterLabels[room]}</div>
             <div className="font-display font-bold text-xl mt-1">{counts[room] ?? 0}</div>
-          </div>
+          </Card>
         ))}
       </div>
 

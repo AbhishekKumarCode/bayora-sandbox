@@ -1,3 +1,5 @@
+import { Card } from "./ui";
+
 type Tone = "attacker" | "defender" | "default";
 
 const toneBorder: Record<Tone, string> = {
@@ -22,13 +24,13 @@ type Props = {
 
 export default function RoomCard({ emoji, title, description, agentLabel, tone }: Props) {
   return (
-    <div className={`bg-card border rounded-card card-shadow card-hover p-4 ${toneBorder[tone]}`}>
+    <Card className={`card-hover !p-4 ${toneBorder[tone]}`}>
       <div className="flex items-center gap-2 mb-1">
         <span className="text-lg leading-none">{emoji}</span>
         <h3 className={`font-display font-semibold text-sm ${toneText[tone]}`}>{title}</h3>
       </div>
       <p className="text-xs text-muted-foreground">{description}</p>
       <div className="mt-3 text-[11px] font-mono text-muted-foreground">{agentLabel}</div>
-    </div>
+    </Card>
   );
 }
