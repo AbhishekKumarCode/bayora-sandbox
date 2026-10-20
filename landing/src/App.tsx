@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { ArrowRight, ArrowDown, ChevronUp, Info, X } from 'lucide-react';
 import { useScrollProgress } from '@/useScrollProgress';
 import { Scene } from '@/Scene';
+import { Footage } from '@/Footage';
 
 const APP = '/app/';
 const NAVY = '#0B1020';
@@ -149,6 +150,7 @@ export default function App() {
     <>
       <div ref={containerRef} className="relative h-[500vh]">
         <div className="sticky top-0 w-full h-screen overflow-hidden" style={{ background: NAVY }}>
+          <Footage progressRef={progressRef} />
           <Scene progressRef={progressRef} />
 
           <div className="absolute inset-0 pointer-events-none text-white">

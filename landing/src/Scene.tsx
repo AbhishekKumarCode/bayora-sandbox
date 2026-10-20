@@ -3,7 +3,6 @@ import { useEffect, useRef } from 'react';
 type Node = { x: number; y: number; z: number; vx: number; vy: number; hit: number };
 type Streak = { x: number; y: number; vx: number; vy: number; life: number; state: 'inbound' | 'deflected' | 'landed'; len: number };
 
-const NAVY = '#0B1020';
 const BLUE = [79, 125, 243] as const;
 const RED = [244, 91, 91] as const;
 const GREEN = [29, 185, 127] as const;
@@ -65,12 +64,10 @@ export function Scene({ progressRef }: { progressRef: React.MutableRefObject<num
       const cy = (narrow ? h * (0.78 - 0.1 * drift) : h * 0.52) + (mouse.y - 0.5) * 12;
       const R = Math.min(w, h) * (narrow ? 0.34 : 0.3 - 0.04 * drift);
 
-      // background
-      const g = ctx.createLinearGradient(0, 0, 0, h);
-      g.addColorStop(0, NAVY); g.addColorStop(1, '#0E1530');
-      ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+      // transparent over the footage; only a soft glow behind the lattice
+      ctx.clearRect(0, 0, w, h);
       const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 1.9);
-      glow.addColorStop(0, rgba(BLUE, 0.16 + 0.1 * shield)); glow.addColorStop(1, 'rgba(0,0,0,0)');
+      glow.addColorStop(0, rgba(BLUE, 0.12 + 0.1 * shield)); glow.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = glow; ctx.fillRect(0, 0, w, h);
 
       // lattice
