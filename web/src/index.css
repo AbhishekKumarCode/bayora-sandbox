@@ -116,3 +116,9 @@ body {
 .caret::after { content: "▍"; animation: blink 1s steps(1) infinite; color: #8b8f9a; }
 @keyframes blink { 50% { opacity: 0; } }
 .hairline { height: 1px; background: linear-gradient(90deg, transparent, var(--color-line-strong), transparent); }
+
+/* moving packet on the live pipeline */
+@keyframes packet-a { from { cx: 22%; } to { cx: 44%; } }
+@keyframes packet-b { from { cx: 56%; } to { cx: 78%; } }
+.packet-a { animation: packet-a 1.2s ease-in-out infinite; }
+.packet-b { animation: packet-b 1.2s ease-in-out infinite; }

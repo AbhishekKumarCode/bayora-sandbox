@@ -58,12 +58,12 @@ export function demoEntries(): AuditEntry[] {
     let t = start;
     for (let i = 0; i < n; i++) {
       const attackId = `demo-${r}-${i}-${hex(i + r * 100).slice(0, 8)}`;
-      const technique = TECHS[i % TECHS.length];
+      const k = (i + r * 3) % TECHS.length; // vary the mix per run so trends move
+      const technique = TECHS[k];
       push(t, "attack_submitted", { attackId, technique });
       t += 900 + (i * 137) % 600;
-      push(t, "llm_response_received", { attackId, technique, responsePreview: REPLIES[i % REPLIES.length].slice(0, 120), mock: true });
+      push(t, "llm_response_received", { attackId, technique, responsePreview: REPLIES[k].slice(0, 120), mock: true });
       t += 600 + (i * 91) % 400;
-      const k = i % REPLIES.length;
       const verdict = VERDICT_FOR_REPLY[k];
       push(t, "blue_team_verdict", {
         attackId,

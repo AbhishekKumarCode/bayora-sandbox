@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
-import { useStore } from "@/lib/store";
-import { overallStats, techniqueLabel } from "@/lib/model";
+import { useStore, useNow } from "@/lib/store";
+import { overallStats, techniqueLabel, deriveRuns } from "@/lib/model";
 import { Card, Pill, Actor, cx } from "@/components/ui";
+import { Gauge, Cell, Legend, VERDICT_COLOR, HBar } from "@/components/charts";
+import { Heading } from "./Overview";
 
 type Technique = { id: string; family: string; severity: "high" | "medium" | "low"; summary: string; prompt: string; owasp: string };
 
@@ -20,20 +22,55 @@ const LIBRARY: Technique[] = [
 
 export function Library() {
   const s = useStore();
+  const now = useNow(5000);
   const stats = useMemo(() => overallStats(s.entries), [s.entries]);
+  const runs = useMemo(() => [...deriveRuns(s.entries, now)].reverse(), [s.entries, now]);
   const [q, setQ] = useState("");
   const [family, setFamily] = useState<string>("All");
-  const [sel, setSel] = useState<Technique>(LIBRARY[0]);
+  const [sel, setSel] = useState<Technique>(LIBRARY[4]);
   const families = ["All", ...new Set(LIBRARY.map((t) => t.family))];
   const list = LIBRARY.filter((t) => (family === "All" || t.family === family) && (t.id.includes(q.toLowerCase()) || t.summary.toLowerCase().includes(q.toLowerCase())));
   const statFor = (id: string) => stats.byTechnique.find((t) => t.technique === id);
+  const pctFor = (id: string) => { const st = statFor(id); return st ? Math.round((st.blocked / st.total) * 100) : null; };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
-        <h1 className="text-[24px] font-semibold tracking-tight">Attack library</h1>
-        <p className="mt-1 text-[13.5px] text-muted">The techniques the red room can fire, with how the model has held up against each so far.</p>
+        <h1 className="text-[28px] font-semibold tracking-tight sm:text-[32px]">Attack library</h1>
+        <p className="mt-1.5 text-[14px] text-muted">The techniques the red room fires, and how the model has held up against each one.</p>
       </div>
+
+      {/* Heatmap: technique × run */}
+      <Card className="p-5">
+        <Heading title="Where the model breaks" sub="One cell per technique per run. Red cells are where an attack got through." right={<Legend items={[{ color: VERDICT_COLOR.blocked, label: "Blocked" }, { color: VERDICT_COLOR.ambiguous, label: "Unsure" }, { color: VERDICT_COLOR.passed_through, label: "Got through" }, { color: "var(--color-line)", label: "Not fired" }]} />} />
+        <div className="overflow-x-auto">
+          <table className="text-[12.5px]">
+            <thead>
+              <tr>
+                <th className="pr-4 text-left font-medium text-muted">Technique</th>
+                {runs.map((r) => <th key={r.id} className="px-1 pb-2 text-center font-medium text-muted">R{r.index}</th>)}
+                <th className="pl-4 text-left font-medium text-muted">Blocked</th>
+              </tr>
+            </thead>
+            <tbody>
+              {LIBRARY.map((t) => {
+                const pct = pctFor(t.id);
+                return (
+                  <tr key={t.id} className={cx("cursor-pointer hover:bg-canvas", sel.id === t.id && "bg-brand-soft/60")} onClick={() => setSel(t)}>
+                    <td className="whitespace-nowrap py-1 pr-4 font-medium">{techniqueLabel(t.id)}</td>
+                    {runs.map((r) => {
+                      const hits = r.attacks.filter((a) => a.technique === t.id);
+                      const v = hits.length ? (hits.some((a) => a.verdict?.data.verdict === "passed_through") ? "passed_through" : hits.some((a) => a.verdict?.data.verdict === "ambiguous") ? "ambiguous" : hits.every((a) => a.verdict) ? "blocked" : "pending") : undefined;
+                      return <td key={r.id} className="px-1 py-1"><Cell v={v} title={hits.length ? `Run ${r.index}: ${v}` : "not fired"} /></td>;
+                    })}
+                    <td className="py-1 pl-4"><div className="flex w-[120px] items-center gap-2">{pct == null ? <span className="text-muted">–</span> : <><HBar value={pct} color={pct >= 70 ? "var(--color-sealed)" : pct >= 40 ? "var(--color-pending)" : "var(--color-attack)"} height={6} /><span className="w-9 tabular-nums text-muted">{pct}%</span></>}</div></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </Card>
 
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative">
@@ -46,25 +83,18 @@ export function Library() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-5">
-        <div className="space-y-2 lg:col-span-2">
+        <div className="grid gap-3 sm:grid-cols-2 lg:col-span-2 lg:grid-cols-1">
           {list.map((t) => {
             const st = statFor(t.id);
+            const pct = pctFor(t.id);
             return (
-              <button key={t.id} onClick={() => setSel(t)} className={cx("card w-full p-4 text-left transition-all hover:-translate-y-px", sel.id === t.id && "ring-2 ring-brand/40")}>
-                <div className="flex items-center gap-3">
-                  <Actor kind="attacker" size={32} />
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[13.5px] font-semibold">{techniqueLabel(t.id)}</div>
-                    <div className="truncate text-[12px] text-muted">{t.family} · {t.owasp}</div>
-                  </div>
-                  <Pill tone={t.severity === "high" ? "attack" : t.severity === "medium" ? "pending" : "judge"}>{t.severity}</Pill>
+              <button key={t.id} onClick={() => setSel(t)} className={cx("card flex items-center gap-3 p-4 text-left transition-all hover:-translate-y-px", sel.id === t.id && "ring-2 ring-brand/40")}>
+                <Actor kind="attacker" size={36} />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-[13.5px] font-semibold">{techniqueLabel(t.id)}</div>
+                  <div className="truncate text-[12px] text-muted">{t.family} · {st ? `${st.total} fired` : "not fired yet"}</div>
                 </div>
-                {st && (
-                  <div className="mt-3 flex items-center gap-2 text-[12px] text-muted">
-                    <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-canvas"><span className="block h-full bg-sealed" style={{ width: `${(st.blocked / st.total) * 100}%` }} /></span>
-                    <span className="tabular-nums">{st.blocked}/{st.total} blocked</span>
-                  </div>
-                )}
+                {pct != null ? <Gauge pct={pct} /> : <Pill tone={t.severity === "high" ? "attack" : t.severity === "medium" ? "pending" : "judge"}>{t.severity}</Pill>}
               </button>
             );
           })}
@@ -72,26 +102,30 @@ export function Library() {
         </div>
 
         <div className="lg:col-span-3">
-          <Card className="p-6 lg:sticky lg:top-8" glow="attack">
+          <Card className="p-6 lg:sticky lg:top-8" glow={pctFor(sel.id) != null && pctFor(sel.id)! < 50 ? "attack" : "brand"}>
             <div className="flex items-start gap-3">
-              <Actor kind="attacker" size={40} />
-              <div>
-                <h2 className="text-[18px] font-semibold tracking-tight">{techniqueLabel(sel.id)}</h2>
-                <div className="mt-0.5 text-[13px] text-muted">{sel.family} · OWASP {sel.owasp} · <code className="mono">{sel.id}</code></div>
+              <Actor kind="attacker" size={44} />
+              <div className="min-w-0 flex-1">
+                <h2 className="text-[20px] font-semibold tracking-tight">{techniqueLabel(sel.id)}</h2>
+                <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[13px] text-muted">
+                  {sel.family} · OWASP {sel.owasp}
+                  <Pill tone={sel.severity === "high" ? "attack" : sel.severity === "medium" ? "pending" : "judge"}>{sel.severity} severity</Pill>
+                </div>
               </div>
+              {pctFor(sel.id) != null && <Gauge pct={pctFor(sel.id)!} size={72} stroke={8} />}
             </div>
-            <p className="mt-4 text-[14px] text-ink-2">{sel.summary}</p>
-            <div className="mt-4 text-[12px] font-medium uppercase tracking-[0.08em] text-muted">Prompt the red room fires</div>
-            <pre className="mono mt-2 whitespace-pre-wrap rounded-[12px] border border-line bg-canvas p-4 text-[12.5px] leading-relaxed text-ink-2">{sel.prompt}</pre>
+            <p className="mt-4 text-[14.5px] text-ink-2">{sel.summary}</p>
+            <div className="mt-5 text-[12px] font-medium uppercase tracking-[0.08em] text-muted">The exact prompt the red room sends</div>
+            <pre className="mono mt-2 whitespace-pre-wrap rounded-[12px] border border-line bg-canvas p-4 text-[12.5px] leading-relaxed text-ink">{sel.prompt}</pre>
             {(() => { const st = statFor(sel.id); return st ? (
               <div className="mt-5 grid grid-cols-3 gap-3">
                 <Mini k="Fired" v={st.total} />
                 <Mini k="Blocked" v={st.blocked} tone="sealed" />
-                <Mini k="Catch rate" v={`${Math.round((st.blocked / st.total) * 100)}%`} tone="judge" />
+                <Mini k="Got through" v={st.total - st.blocked} tone={st.total - st.blocked > 0 ? "attack" : undefined} />
               </div>
             ) : <div className="mt-5 text-[13px] text-muted">Not fired yet in the current data.</div>; })()}
             <div className="mt-5 rounded-[12px] bg-judge-soft/70 p-4 text-[13px] text-ink-2">
-              <span className="font-semibold text-judge">Blind guarantee.</span> The judge never sees this prompt or its label, so it cannot pattern-match on the attack. It scores the reply alone.
+              <span className="font-semibold text-judge">Blind guarantee.</span> The judge never sees this prompt or its name, so it cannot pattern-match on the attack. It scores the reply alone.
             </div>
           </Card>
         </div>
@@ -100,11 +134,11 @@ export function Library() {
   );
 }
 
-function Mini({ k, v, tone }: { k: string; v: React.ReactNode; tone?: "sealed" | "judge" }) {
+function Mini({ k, v, tone }: { k: string; v: React.ReactNode; tone?: "sealed" | "attack" }) {
   return (
     <div className="rounded-[12px] border border-line bg-white p-3">
       <div className="text-[11.5px] uppercase tracking-[0.08em] text-muted">{k}</div>
-      <div className={cx("mt-1 text-[20px] font-semibold tabular-nums", tone === "sealed" && "text-sealed", tone === "judge" && "text-judge")}>{v}</div>
+      <div className={cx("mt-1 text-[22px] font-semibold tabular-nums", tone === "sealed" && "text-sealed", tone === "attack" && "text-attack")}>{v}</div>
     </div>
   );
 }
