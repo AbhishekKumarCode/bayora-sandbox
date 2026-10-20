@@ -112,7 +112,8 @@ const state = {
   connected: null,
   mockMode: null,
   verifyResult: null,
-  tamperArmed: false
+  tamperArmed: false,
+  lastSeenSeq: 0
 };
 
 function updateOnlinePill() {
@@ -127,19 +128,25 @@ function updateOnlinePill() {
 setInterval(() => { const c = $("#onlineClock"); if (c) c.textContent = new Date().toLocaleTimeString([], { hour12: false }); }, 1000);
 
 async function pollBroker() {
+  let fresh = [];
   try {
     const health = await fetchHealth();
     state.connected = true;
     state.mockMode = health.mockMode;
     if (hasAuditToken()) {
       const audit = await fetchAudit();
+      fresh = audit.entries.filter((e) => e.seq > state.lastSeenSeq);
+      const isFirstLoad = state.lastSeenSeq === 0 && fresh.length === audit.entries.length && audit.entries.length > 3;
+      if (isFirstLoad) fresh = [];
       state.entries = audit.entries;
+      if (audit.entries.length) state.lastSeenSeq = audit.entries[audit.entries.length - 1].seq;
     }
   } catch {
     state.connected = false;
   }
   updateOnlinePill();
   if (["overview", "live-testing", "audit-logs"].includes(state.page)) render();
+  if (state.page === "live-testing" && fresh.length) animateLivePipeline(fresh);
 }
 async function connectBroker() {
   getAuditToken(); // prompts if needed — this is a real user click, so that's fine
@@ -217,6 +224,37 @@ function miniArchitecture() {
     <div class="arch-node arch-defender"><div class="node-cube blue-cube">⬢</div><strong>Defender Room</strong><span>Safety agent</span><em>ISOLATED</em></div>
     <div class="arch-lock lock-one">♙</div><div class="arch-lock lock-two">♙</div><div class="arch-caption"><span class="dot green"></span> Separate execution boundaries · No cross-tenant access</div></div>`;
 }
+function livePipelineArch() {
+  return `<div class="live-pipeline-arch" id="livePipelineArch"><div class="arch-grid"></div>
+    <div class="arch-connection live-red-line"><span class="data-pulse" id="pulseAM"></span></div>
+    <div class="arch-connection live-blue-line"><span class="data-pulse" id="pulseMD"></span></div>
+    <div class="arch-node live-attacker" id="nodeAttacker"><div class="node-cube red-cube">◎</div><strong>Attacker</strong><span>Adversarial prompts</span><em>ISOLATED</em></div>
+    <div class="arch-node live-model" id="nodeModel"><div class="node-cube purple-cube">⬡</div><strong>Model under test</strong><span>Client LLM</span><em>ISOLATED</em></div>
+    <div class="arch-node live-defender" id="nodeDefender"><div class="node-cube blue-cube">⬢</div><strong>Defender</strong><span>Safety evaluation</span><em>ISOLATED</em></div>
+    <div class="arch-lock live-lock-one">♙</div><div class="arch-lock live-lock-two">♙</div>
+    <div class="arch-caption"><span class="dot ${state.connected ? "green" : ""}"></span> Live — pulses travel as real events arrive</div></div>`;
+}
+function triggerPulse(el) {
+  if (!el) return;
+  el.classList.remove("run");
+  void el.offsetWidth; // force reflow so the animation can restart
+  el.classList.add("run");
+}
+function pulseCube(id) {
+  const cube = document.querySelector(`#${id} .node-cube`);
+  if (!cube) return;
+  cube.classList.remove("pulse");
+  void cube.offsetWidth;
+  cube.classList.add("pulse");
+}
+function animateLivePipeline(freshEntries) {
+  if (!$("#livePipelineArch")) return;
+  for (const e of freshEntries) {
+    if (e.event === "attack_submitted") { pulseCube("nodeAttacker"); triggerPulse($("#pulseAM")); }
+    else if (e.event === "llm_response_received" || e.event === "llm_error") { pulseCube("nodeModel"); }
+    else if (e.event === "blue_team_verdict") { pulseCube("nodeDefender"); triggerPulse($("#pulseMD")); }
+  }
+}
 function recentFromEntries() {
   const attacks = state.entries.filter((e) => e.event === "attack_submitted").slice(-5).reverse();
   return attacks.map((a) => {
@@ -255,7 +293,7 @@ function liveTesting() {
   const verdictTone = stats.verdictsSoFar === 0 ? "gray" : stats.catchRate >= 80 ? "green" : stats.catchRate >= 50 ? "orange" : "red";
   return `<div class="toolbar-row"><div class="segmented"><button class="selected">Current session</button><button data-action="history">Run history</button></div><div class="toolbar-actions"><span class="live-label"><span class="dot ${state.connected?"green":""}"></span>${state.connected?"Live stream active":"Broker unreachable"}</span><button class="btn btn-secondary" data-action="open-run">▶ Start new run</button></div></div>
   <div class="live-layout"><div class="live-main">
-    ${card("Evaluation session",`Session #HILL-001${state.mockMode ? " · mock LLM" : " · live LLM"}`,`<div class="run-summary-grid"><div><span>Attack cases</span><strong>${stats.attacksTested}</strong></div><div><span>Evaluated</span><strong>${stats.verdictsSoFar}<small>/${stats.attacksTested}</small></strong></div><div><span>Catch rate</span><strong>${stats.catchRate}%</strong></div><div><span>Status</span><strong>${state.connected ? "Live" : "Offline"}</strong></div></div><div class="run-progress-head"><span>Evaluation progress</span><b>${stats.attacksTested ? Math.round((stats.verdictsSoFar/stats.attacksTested)*100) : 0}%</b></div><div class="wide-progress"><span style="width:${stats.attacksTested ? Math.round((stats.verdictsSoFar/stats.attacksTested)*100) : 0}%"></span></div><div class="pipeline"><div class="pipeline-step red-step"><span>◎</span><b>Attacker</b><small>Adversarial prompts</small>${badge("Isolated","red")}</div><div class="pipeline-arrow">→<small>Answer only</small></div><div class="pipeline-step purple-step"><span>⬡</span><b>Model under test</b><small>Client LLM</small>${badge("Isolated","purple")}</div><div class="pipeline-arrow">→<small>Blind verdict</small></div><div class="pipeline-step blue-step"><span>⬢</span><b>Defender</b><small>Safety evaluation</small>${badge("Isolated","blue")}</div></div>`)}
+    ${card("Evaluation session",`Session #HILL-001${state.mockMode ? " · mock LLM" : " · live LLM"}`,`<div class="run-summary-grid"><div><span>Attack cases</span><strong>${stats.attacksTested}</strong></div><div><span>Evaluated</span><strong>${stats.verdictsSoFar}<small>/${stats.attacksTested}</small></strong></div><div><span>Catch rate</span><strong>${stats.catchRate}%</strong></div><div><span>Status</span><strong>${state.connected ? "Live" : "Offline"}</strong></div></div><div class="run-progress-head"><span>Evaluation progress</span><b>${stats.attacksTested ? Math.round((stats.verdictsSoFar/stats.attacksTested)*100) : 0}%</b></div><div class="wide-progress"><span style="width:${stats.attacksTested ? Math.round((stats.verdictsSoFar/stats.attacksTested)*100) : 0}%"></span></div>${livePipelineArch()}`)}
     ${card("Live event stream","Real events from the broker's audit log, polled every 2s.",`<div class="table-toolbar"><div class="filter-pills">${["All events","ATTACK","RESPONSE","CAUGHT","GOT THROUGH","UNSURE"].map(f=>`<button class="${state.eventFilter===f?"chosen":""}" data-event-filter="${f}">${f}</button>`).join("")}</div></div>${events(state.eventFilter)}`)}
   </div><div class="live-side">
     ${card("Run verdict","Blind evaluation summary — real, computed from scored verdicts.",`<div class="verdict-score"><div class="score-ring" style="background:conic-gradient(#21bd83 0 ${stats.catchRate}%,#e9eef6 ${stats.catchRate}%)"><span>${stats.catchRate}%</span></div><div><strong>${verdictLabel}</strong><p>${stats.gotThrough} test case${stats.gotThrough===1?"":"s"} got through in this session.</p>${badge(`${stats.gotThrough} escaped`,verdictTone)}</div></div><div class="mini-stat-list"><div><span>Blocked by defense</span><b>${stats.caught}</b></div><div><span>Reached model</span><b>${stats.gotThrough}</b></div><div><span>Verdicts recorded</span><b>${stats.verdictsSoFar} / ${stats.attacksTested}</b></div></div>`)}
