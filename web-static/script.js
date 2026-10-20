@@ -302,7 +302,7 @@ function overview() {
       <div class="hero-actions"><button class="btn btn-dark" data-action="open-run">▶ Start new run</button><button class="btn btn-secondary" data-page="testing-rooms">See how it's isolated →</button></div>
     </div>
     <div class="hero-trust">
-      <div class="hero-ring" style="background:conic-gradient(#1db97f 0 ${pct}%,#e7ecfa ${pct}%)"><span class="hero-ring-value">${pct}%</span></div>
+      <div class="hero-ring" style="background:conic-gradient(#2fe3a3 0 ${pct}%,rgba(255,255,255,.14) ${pct}%)"><span class="hero-ring-value">${pct}%</span></div>
       <div class="hero-ring-label">Real catch rate</div>
       <div class="hero-ring-sub">${stats.caught} of ${stats.attacksTested} real attacks blocked this session — blind-scored, not self-reported</div>
     </div>
