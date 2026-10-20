@@ -66,6 +66,42 @@ async function triggerRunReal() {
 }
 
 const KNOWN_VERDICTS = new Set(["blocked", "passed_through", "ambiguous"]);
+const SVG_ATTRS = 'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"';
+const ICONS = {
+  attacker: `<svg ${SVG_ATTRS}><path d="M4 21c0-4 3-6 4-7"/><path d="M20 21c0-4-3-6-4-7"/><path d="M12 3c-4 0-6 3-6 7 0 2 1 4 2 5h8c1-1 2-3 2-5 0-4-2-7-6-7z"/><path d="M9 13c1 1 2 1.5 3 1.5s2-.5 3-1.5"/></svg>`,
+  model: `<svg ${SVG_ATTRS}><path d="M9.5 3A3.5 3.5 0 0 0 6 6.5v.5a3 3 0 0 0-2 2.8 3 3 0 0 0 1 2.2 3 3 0 0 0 0 4A3 3 0 0 0 8 19a3.5 3.5 0 0 0 4-1V5.5A3.5 3.5 0 0 0 9.5 3z"/><path d="M14.5 3A3.5 3.5 0 0 1 18 6.5v.5a3 3 0 0 1 2 2.8 3 3 0 0 1-1 2.2 3 3 0 0 1 0 4A3 3 0 0 1 16 19a3.5 3.5 0 0 1-4-1V5.5A3.5 3.5 0 0 1 14.5 3z"/><path d="M12 8h-1.5M12 12h-2M12 16h-1.5M12 8h1.5M12 12h2M12 16h1.5"/></svg>`,
+  defender: `<svg ${SVG_ATTRS}><path d="M12 3l7 3v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg>`,
+  lock: `<svg ${SVG_ATTRS}><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>`,
+  ledger: `<svg ${SVG_ATTRS}><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/><path d="M9 12h7M9 16h7"/></svg>`,
+};
+function eventLabel(e) {
+  if (e.event === "attack_submitted") return `Attack fired · ${e.data.technique}`;
+  if (e.event === "llm_response_received") return "Model answered";
+  if (e.event === "llm_error") return "Model error";
+  if (e.event === "blue_team_verdict") return e.data.verdict === "blocked" ? "Blind judge: blocked" : e.data.verdict === "passed_through" ? "Blind judge: got through" : "Blind judge: unsure";
+  return e.event;
+}
+function isRunActive() { return Date.now() - state.lastEventAt < 9000; }
+// The stage holds the only <video>; it must survive innerHTML re-renders, so it is
+// parked in #stageHolder before each render and moved into #pipelineSlot after.
+function parkStage() {
+  const stage = $("#pipelineStage"), holder = $("#stageHolder");
+  if (stage && stage.parentElement !== holder) holder.appendChild(stage);
+}
+function mountStage() {
+  const stage = $("#pipelineStage"), slot = $("#pipelineSlot");
+  if (!stage) return;
+  if (slot) { slot.appendChild(stage); syncStage(); }
+  else $("#pipelineVideo").pause();
+}
+function syncStage() {
+  const stage = $("#pipelineStage"), video = $("#pipelineVideo"), active = isRunActive();
+  stage.classList.toggle("idle", !active);
+  $("#stagePill").classList.toggle("live", active);
+  $("#stageLabel").textContent = active ? "Run in progress" : state.connected ? "Idle — start a run to watch it" : "Broker unreachable";
+  if (active) { if (video.paused) video.play().catch(() => {}); }
+  else if (!video.paused) { video.pause(); video.currentTime = 0; }
+}
 function roomOf(event) {
   if (event === "attack_submitted") return "attacker";
   if (event === "llm_response_received" || event === "llm_error") return "model";
@@ -113,7 +149,8 @@ const state = {
   mockMode: null,
   verifyResult: null,
   tamperArmed: false,
-  lastSeenSeq: 0
+  lastSeenSeq: 0,
+  lastEventAt: 0
 };
 
 function updateOnlinePill() {
@@ -139,6 +176,7 @@ async function pollBroker() {
       const isFirstLoad = state.lastSeenSeq === 0 && fresh.length === audit.entries.length && audit.entries.length > 3;
       if (isFirstLoad) fresh = [];
       state.entries = audit.entries;
+      if (fresh.length) state.lastEventAt = Date.now();
       if (audit.entries.length) state.lastSeenSeq = audit.entries[audit.entries.length - 1].seq;
     }
   } catch {
@@ -234,42 +272,21 @@ function architectureFull() {
 }
 function howItWorks() {
   const steps = [
-    ["1", "Attack", "A red-team agent fires a real adversarial prompt at the model under test."],
-    ["2", "Evaluate blind", "A separate judge sees only the model's answer — never the attack — and scores it."],
-    ["3", "Seal the record", "Every step is written to a hash-chained log. Edit one line, and Verify catches it."],
+    ["red", ICONS.attacker, "Attack", "A red-team agent fires a real adversarial prompt at the model under test."],
+    ["blue", ICONS.defender, "Evaluate blind", "A separate judge sees only the model's answer — never the attack — and scores it."],
+    ["purple", ICONS.lock, "Seal the record", "Every step is written to a hash-chained log. Edit one line, and Verify catches it."],
   ];
-  return `<div class="how-steps">${steps.map(([n, title, body], i) => `<div class="how-step"><span class="how-num">${n}</span><div><b>${title}</b><p>${body}</p></div></div>${i < steps.length - 1 ? '<div class="how-arrow">→</div>' : ""}`).join("")}</div>`;
+  return `<div class="how-steps">${steps.map(([color, icon, title, body], i) => `<div class="how-step"><span class="how-num ${color}">${icon}</span><div><b>${title}</b><p>${body}</p></div></div>${i < steps.length - 1 ? '<div class="how-arrow">→</div>' : ""}`).join("")}</div>`;
 }
 function livePipelineArch() {
-  return `<div class="live-pipeline-arch" id="livePipelineArch"><div class="arch-grid"></div>
-    <div class="arch-connection live-red-line"><span class="data-pulse" id="pulseAM"></span></div>
-    <div class="arch-connection live-blue-line"><span class="data-pulse" id="pulseMD"></span></div>
-    <div class="arch-node live-attacker" id="nodeAttacker"><div class="node-cube red-cube">◎</div><strong>Attacker</strong><span>Adversarial prompts</span><em>ISOLATED</em></div>
-    <div class="arch-node live-model" id="nodeModel"><div class="node-cube purple-cube">⬡</div><strong>Model under test</strong><span>Client LLM</span><em>ISOLATED</em></div>
-    <div class="arch-node live-defender" id="nodeDefender"><div class="node-cube blue-cube">⬢</div><strong>Defender</strong><span>Safety evaluation</span><em>ISOLATED</em></div>
-    <div class="arch-lock live-lock-one">♙</div><div class="arch-lock live-lock-two">♙</div>
-    <div class="arch-caption"><span class="dot ${state.connected ? "green" : ""}"></span> Live — pulses travel as real events arrive</div></div>`;
-}
-function triggerPulse(el) {
-  if (!el) return;
-  el.classList.remove("run");
-  void el.offsetWidth; // force reflow so the animation can restart
-  el.classList.add("run");
-}
-function pulseCube(id) {
-  const cube = document.querySelector(`#${id} .node-cube`);
-  if (!cube) return;
-  cube.classList.remove("pulse");
-  void cube.offsetWidth;
-  cube.classList.add("pulse");
+  return `<div id="pipelineSlot"></div>`;
 }
 function animateLivePipeline(freshEntries) {
-  if (!$("#livePipelineArch")) return;
-  for (const e of freshEntries) {
-    if (e.event === "attack_submitted") { pulseCube("nodeAttacker"); triggerPulse($("#pulseAM")); }
-    else if (e.event === "llm_response_received" || e.event === "llm_error") { pulseCube("nodeModel"); }
-    else if (e.event === "blue_team_verdict") { pulseCube("nodeDefender"); triggerPulse($("#pulseMD")); }
-  }
+  const el = $("#stageEvent");
+  if (!el || !freshEntries.length) return;
+  const last = freshEntries[freshEntries.length - 1];
+  el.textContent = eventLabel(last);
+  el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash");
 }
 function recentFromEntries() {
   const attacks = state.entries.filter((e) => e.event === "attack_submitted").slice(-5).reverse();
@@ -294,22 +311,27 @@ function overview() {
   const recent = recentFromEntries();
   const dist = techniqueDistribution();
   const pct = Math.max(0, Math.min(100, stats.catchRate));
+  const running = isRunActive();
   return `<section class="hero-panel-v2">
     <div class="hero-copy">
       <div class="hero-kicker">✧ TRUST, MADE VERIFIABLE</div>
       <h2>Is your AI<br><span>actually safe?</span></h2>
       <p>A red-team agent attacks the model. A separate judge scores the answer blind — it never sees the attack. Every step is sealed in a tamper-evident log, so the result can't be rigged after the fact.</p>
-      <div class="hero-actions"><button class="btn btn-dark" data-action="open-run">▶ Start new run</button><button class="btn btn-secondary" data-page="testing-rooms">See how it's isolated →</button></div>
+      <div class="hero-actions"><button class="btn btn-primary" data-action="open-run">▶ Start new run</button><button class="btn btn-secondary" data-page="testing-rooms">See how it's isolated →</button></div>
+      <div class="hero-stats">
+        <div class="hero-stat"><span class="mini-ring" style="background:conic-gradient(#1db97f 0 ${pct}%,#e3e8f5 ${pct}%)"><i>${pct}%</i></span><div><b>${pct}%</b><span>Real catch rate</span></div></div>
+        <div class="hero-stat"><span class="hero-stat-icon red">${ICONS.attacker}</span><div><b>${stats.attacksTested}</b><span>Attacks fired</span></div></div>
+        <div class="hero-stat"><span class="hero-stat-icon blue">${ICONS.defender}</span><div><b>${stats.caught}</b><span>Blocked blind</span></div></div>
+        <div class="hero-stat"><span class="hero-stat-icon purple">${ICONS.ledger}</span><div><b>${state.entries.length}</b><span>Sealed events</span></div></div>
+      </div>
     </div>
-    <div class="hero-trust">
-      <div class="hero-ring" style="background:conic-gradient(#2fe3a3 0 ${pct}%,rgba(255,255,255,.14) ${pct}%)"><span class="hero-ring-value">${pct}%</span></div>
-      <div class="hero-ring-label">Real catch rate</div>
-      <div class="hero-ring-sub">${stats.caught} of ${stats.attacksTested} real attacks blocked this session — blind-scored, not self-reported</div>
-    </div>
+    <button class="hero-visual" data-page="live-testing" aria-label="Open live testing">
+      <img src="assets/pipeline-poster.jpg" alt="Red team, model under test and blue team as isolated glass rooms">
+      <span class="play-badge"><span class="dot ${running ? "red" : "green"}"></span>${running ? "Run in progress — watch live" : "Watch the pipeline run"}</span>
+    </button>
   </section>
-  <section class="card arch-card"><div class="card-header"><div><h3>How the sandbox is wired</h3><p>Three isolated rooms, one broker, zero shortcuts.</p></div><span class="inline-good"><span class="dot ${state.connected ? "green" : ""}"></span>${state.connected ? "Live" : "Offline"}</span></div>${architectureFull()}</section>
   ${howItWorks()}
-  <div class="metric-grid">${metric("◎","Attacks tested",stats.attacksTested,`Across ${dist.length} techniques`,"red")}${metric("⬡","Attacks caught",stats.caught,`${stats.catchRate}% catch rate`,"blue")}${metric("⛨","Gap if unsealed",`${stats.illustrativeLeakyRate - stats.catchRate} pts`,"Illustrative — see Settings","purple")}${metric("▣","Verdicts scored",`${stats.verdictsSoFar}/${stats.attacksTested}`,stats.attacksTested ? `${Math.round((stats.verdictsSoFar/stats.attacksTested)*100)}% evaluated` : "0% evaluated","green")}</div>
+  <div class="metric-grid">${metric(ICONS.attacker,"Attacks tested",stats.attacksTested,`Across ${dist.length} techniques`,"red")}${metric(ICONS.defender,"Attacks caught",stats.caught,`${stats.catchRate}% catch rate`,"blue")}${metric(ICONS.lock,"Gap if unsealed",`${stats.illustrativeLeakyRate - stats.catchRate} pts`,"Illustrative — see Settings","purple")}${metric(ICONS.ledger,"Verdicts scored",`${stats.verdictsSoFar}/${stats.attacksTested}`,stats.attacksTested ? `${Math.round((stats.verdictsSoFar/stats.attacksTested)*100)}% evaluated` : "0% evaluated","green")}</div>
   <div class="overview-grid">
     <section class="card health-card"><div class="card-header"><div><h3>Broker connection</h3><p>Live status of the real backend this dashboard talks to.</p></div><span class="inline-good"><span class="dot ${state.connected ? "green" : ""}"></span>${state.connected === null ? "Connecting…" : state.connected ? "Broker reachable" : "Broker unreachable"}</span></div><div class="resource-grid">${resource("Mode",state.mockMode ? 0 : 100,state.mockMode ? "Mock LLM responses" : "Live LLM API","orange","◉")}${resource("Attacks run",Math.min(100,stats.attacksTested*5),`${stats.attacksTested} total`,"blue","▣")}${resource("Catch rate",stats.catchRate,"blind evaluation","green","⌁")}${resource("Scored",stats.attacksTested ? Math.round((stats.verdictsSoFar/stats.attacksTested)*100) : 0,`${stats.verdictsSoFar} / ${stats.attacksTested}`,"purple","▤")}</div></section>
     ${card("Recent attacks","Real attacks from this session, newest first.",recent.length ? `<div class="run-list">${recent.map(r=>`<div class="run-row"><span class="run-id">${esc(r[0])}</span><span class="run-name">${esc(r[1])}</span>${badge(r[2],r[3])}<span class="run-time">${esc(r[4])}</span></div>`).join("")}</div>` : `<div class="empty-state">No attacks run yet this session.</div>`,`<button class="text-action" data-page="live-testing">View all →</button>`)}
@@ -367,10 +389,10 @@ function settingsPage() {
   return `<div class="settings-layout"><div class="settings-nav"><button class="selected">⚙ General</button><button data-action="settings-security">⬡ Security</button><button data-action="settings-notifications">♧ Notifications</button><button data-action="settings-team">♙ Team & access</button></div><div class="settings-content">${card("Workspace","Basic details for this Bayora workspace.",`<label class="form-label">Workspace name<input class="form-input" id="workspaceName" value="${esc(state.settings.workspace)}"></label><label class="form-label">Audit log retention<select class="form-input" id="retention"><option ${state.settings.retention==="7 days"?"selected":""}>7 days</option><option ${state.settings.retention==="30 days"?"selected":""}>30 days</option><option ${state.settings.retention==="90 days"?"selected":""}>90 days</option><option ${state.settings.retention==="180 days"?"selected":""}>180 days</option></select></label>`)}${card("Security preferences","Prototype toggles only; enforcement requires backend integration.",[["strictIsolation","Strict isolation profile","Use dedicated boundaries between red team, model, and defender."],["resourceAlerts","Resource usage alerts","Surface warnings when sandbox resource limits are approached."],["notifications","Activity notifications","Show updates for completed runs and audit events."]].map(([id,title,desc])=>`<div class="preference-row"><div><b>${title}</b><p>${desc}</p></div><button class="toggle ${state.settings[id]?"on":""}" data-setting-toggle="${id}"><span></span></button></div>`).join(""))}<div class="settings-save"><span>Changes are stored in this browser session only.</span><button class="btn btn-primary" data-action="save-settings">Save changes</button></div></div></div>`;
 }
 function testingRooms() {
-  const rooms=[{id:"attacker",name:"Attacker Room",role:"Red-team agent",desc:"Executes adversarial prompts against the model under test.",color:"red",icon:"◎",network:"Outbound to broker only",resources:"1 CPU · 1 GB RAM"},{id:"model",name:"Model Under Test",role:"Client LLM",desc:"Runs the target model with clean, isolated inference context.",color:"purple",icon:"⬡",network:"Broker-mediated inference",resources:"2 CPU · 4 GB RAM"},{id:"defender",name:"Defender Room",role:"Blue-team agent",desc:"Evaluates model responses without access to attacker prompt storage.",color:"blue",icon:"⬢",network:"Receives model output only",resources:"1 CPU · 2 GB RAM"}];
+  const rooms=[{id:"attacker",name:"Attacker Room",role:"Red-team agent",desc:"Executes adversarial prompts against the model under test.",color:"red",icon:ICONS.attacker,network:"Outbound to broker only",resources:"1 CPU · 1 GB RAM"},{id:"model",name:"Model Under Test",role:"Client LLM",desc:"Runs the target model with clean, isolated inference context.",color:"purple",icon:ICONS.model,network:"Broker-mediated inference",resources:"2 CPU · 4 GB RAM"},{id:"defender",name:"Defender Room",role:"Blue-team agent",desc:"Evaluates model responses without access to attacker prompt storage.",color:"blue",icon:ICONS.defender,network:"Receives model output only",resources:"1 CPU · 2 GB RAM"}];
   let config = state.roomTab==="Network" ? [["Attacker → Broker","Allowed"],["Broker → Model","Allowed"],["Model → Defender","Allowed"],["Attacker → Defender","Denied"],["Defender → Attacker","Denied"]] : state.roomTab==="Resource isolation" ? [["Attacker Room","1 CPU · 1 GB RAM"],["Model Room","2 CPU · 4 GB RAM"],["Defender Room","1 CPU · 2 GB RAM"],["Resource quotas","Enabled"]] : [["Room secrets","Capability scoped"],["Payload repository","Red team only"],["Defensive policies","Blue team only"],["Audit artifacts","Append-only access"]];
   return `<div class="rooms-intro"><div><div class="eyebrow">SANDBOX ARCHITECTURE</div><h2>Three rooms. Separate trust boundaries.</h2><p>Keep attacker payloads, model context, and defensive logic isolated while the broker coordinates a test.</p></div>${badge("3 / 3 isolated","green")}</div><div class="room-tabs">${["Architecture","Network","Resource isolation","Access control"].map(t=>`<button class="${state.roomTab===t?"active":""}" data-room-tab="${t}">${t}</button>`).join("")}</div>
-  ${state.roomTab==="Architecture"?`<div class="room-architecture-card"><div class="room-arch-top"><div><h3>Execution boundaries</h3><p>Illustrative architecture · not a live infrastructure diagram</p></div><span class="inline-good"><span class="dot green"></span>Broker healthy</span></div><div class="room-architecture"><div class="room-arch-grid"></div><div class="room-boundary boundary-left"></div><div class="room-boundary boundary-mid"></div><div class="room-boundary boundary-right"></div><div class="room-arch-card attacker"><div class="room-large-icon">◎</div><b>Attacker Room</b><span>Red-team agent</span>${badge("Isolated","red")}<small>Payloads · test cases</small></div><div class="room-arch-card model"><div class="room-large-icon">⬡</div><b>Model Under Test</b><span>Client LLM</span>${badge("Isolated","purple")}<small>Inference context</small></div><div class="room-arch-card defender"><div class="room-large-icon">⬢</div><b>Defender Room</b><span>Blue-team agent</span>${badge("Isolated","blue")}<small>Policies · classifiers</small></div><div class="room-connector conn-left"><span class="lock">♙</span>Controlled I/O</div><div class="room-connector conn-right"><span class="lock">♙</span>Policy gated</div></div><div class="room-security-foot"><span><b>✓</b> Container boundaries</span><span><b>✓</b> Broker-mediated traffic</span><span><b>✓</b> Independent audit events</span></div></div>`:`<section class="card"><div class="card-header"><div><h3>${state.roomTab}</h3><p>Illustrative configuration view.</p></div></div><div class="config-list">${config.map(r=>`<div class="config-row"><span>${r[0]}</span><b>${r[1]}</b></div>`).join("")}</div></section>`}
+  ${state.roomTab==="Architecture"?`<div class="room-architecture-card"><div class="room-arch-top"><div><h3>Execution boundaries</h3><p>Illustrative architecture · not a live infrastructure diagram</p></div><span class="inline-good"><span class="dot green"></span>Broker healthy</span></div><div class="room-architecture"><div class="room-arch-grid"></div><div class="room-boundary boundary-left"></div><div class="room-boundary boundary-mid"></div><div class="room-boundary boundary-right"></div><div class="room-arch-card attacker"><div class="room-large-icon">${ICONS.attacker}</div><b>Attacker Room</b><span>Red-team agent</span>${badge("Isolated","red")}<small>Payloads · test cases</small></div><div class="room-arch-card model"><div class="room-large-icon">${ICONS.model}</div><b>Model Under Test</b><span>Client LLM</span>${badge("Isolated","purple")}<small>Inference context</small></div><div class="room-arch-card defender"><div class="room-large-icon">${ICONS.defender}</div><b>Defender Room</b><span>Blue-team agent</span>${badge("Isolated","blue")}<small>Policies · classifiers</small></div><div class="room-connector conn-left"><span class="lock">♙</span>Controlled I/O</div><div class="room-connector conn-right"><span class="lock">♙</span>Policy gated</div></div><div class="room-security-foot"><span><b>✓</b> Container boundaries</span><span><b>✓</b> Broker-mediated traffic</span><span><b>✓</b> Independent audit events</span></div></div>`:`<section class="card"><div class="card-header"><div><h3>${state.roomTab}</h3><p>Illustrative configuration view.</p></div></div><div class="config-list">${config.map(r=>`<div class="config-row"><span>${r[0]}</span><b>${r[1]}</b></div>`).join("")}</div></section>`}
   <div class="room-detail-grid">${rooms.map(r=>`<button class="room-detail-card ${state.selectedRoom===r.id?"selected":""}" data-room-detail="${r.id}"><div class="room-detail-icon ${r.color}">${r.icon}</div><div class="room-detail-head"><b>${r.name}</b>${badge("Isolated","green")}</div><span>${r.role}</span><p>${r.desc}</p><div class="room-detail-meta"><span>⌁ ${r.network}</span><span>▣ ${r.resources}</span></div><div class="room-detail-open">View room details →</div></button>`).join("")}</div><div class="prototype-note">⚠ These cards describe intended trust boundaries. Real isolation, network policies, and resource enforcement must be implemented by the sandbox backend.</div>`;
 }
 
@@ -383,7 +405,9 @@ function render() {
     "defense-lab":defenseLab, "audit-logs":auditLogs, analytics, reports,
     settings:settingsPage, "testing-rooms":testingRooms
   };
+  parkStage();
   $("#pageContent").innerHTML = views[state.page]();
+  mountStage();
 }
 function navigate(page) {
   if (!titles[page]) return;
@@ -460,6 +484,7 @@ $("#cancelModal").addEventListener("click",closeRunModal);
 $("#runModal").addEventListener("click",(e)=>{if(e.target.id==="runModal")closeRunModal();});
 $("#confirmRun").addEventListener("click",async()=>{
   closeRunModal();
+  state.lastEventAt = Date.now();
   navigate("live-testing");
   try { await triggerRunReal(); toast("Evaluation run started"); await pollBroker(); }
   catch (err) { toast(err.message || "failed to start run"); }

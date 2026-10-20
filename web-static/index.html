@@ -31,9 +31,9 @@
       <div class="section-label">SANDBOX</div>
       <div class="sidebar-status"><span class="dot green"></span>All systems isolated</div>
       <div class="room-links">
-        <button class="room-link" data-page="testing-rooms"><span class="room-icon red">◎</span>Attacker Room</button>
-        <button class="room-link" data-page="testing-rooms"><span class="room-icon purple">⬡</span>Model Room</button>
-        <button class="room-link" data-page="testing-rooms"><span class="room-icon blue">⬢</span>Defender Room</button>
+        <button class="room-link" data-page="testing-rooms"><span class="room-icon red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21c0-4 3-6 4-7"/><path d="M20 21c0-4-3-6-4-7"/><path d="M12 3c-4 0-6 3-6 7 0 2 1 4 2 5h8c1-1 2-3 2-5 0-4-2-7-6-7z"/><path d="M9 13c1 1 2 1.5 3 1.5s2-.5 3-1.5"/></svg></span>Attacker Room</button>
+        <button class="room-link" data-page="testing-rooms"><span class="room-icon purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 3A3.5 3.5 0 0 0 6 6.5v.5a3 3 0 0 0-2 2.8 3 3 0 0 0 1 2.2 3 3 0 0 0 0 4A3 3 0 0 0 8 19a3.5 3.5 0 0 0 4-1V5.5A3.5 3.5 0 0 0 9.5 3z"/><path d="M14.5 3A3.5 3.5 0 0 1 18 6.5v.5a3 3 0 0 1 2 2.8 3 3 0 0 1-1 2.2 3 3 0 0 1 0 4A3 3 0 0 1 16 19a3.5 3.5 0 0 1-4-1V5.5A3.5 3.5 0 0 1 14.5 3z"/></svg></span>Model Room</button>
+        <button class="room-link" data-page="testing-rooms"><span class="room-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg></span>Defender Room</button>
       </div>
       <div class="sidebar-bottom">
         <div class="session-card">
@@ -82,6 +82,15 @@
     </section>
   </div>
   <div class="toast hidden" id="toast"><span>✓</span><span id="toastMessage">Done</span></div>
+  <div id="stageHolder" hidden>
+    <div class="pipeline-stage idle" id="pipelineStage">
+      <video id="pipelineVideo" muted loop playsinline preload="auto" poster="assets/pipeline-poster.jpg"><source src="assets/pipeline.mp4" type="video/mp4"></video>
+      <div class="stage-overlay">
+        <span class="stage-pill" id="stagePill"><span class="dot"></span><span id="stageLabel">Idle</span></span>
+        <span class="stage-event" id="stageEvent"></span>
+      </div>
+    </div>
+  </div>
   <script src="script.js"></script>
 </body>
 </html>
