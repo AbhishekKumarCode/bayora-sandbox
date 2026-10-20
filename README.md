@@ -83,13 +83,29 @@ Open `http://localhost:5173`. Highlights:
   Verify recomputes the HMAC chain server-side and reports exactly where it
   breaks, if it does
 
-An older, dependency-free static version still exists at `dashboard/index.html`
-(plain HTML/JS, no build step) if you want something simpler to serve:
+## Deploying the dashboard
+
+`web/` is a Vite app living inside this monorepo (alongside `services/`,
+`docs/`, etc.), not its own repo — so two settings have to agree or the
+build breaks with `vite: command not found`:
+
+- The Vercel project's **Root Directory** is set to `web` (Project Settings
+  → General), so a GitHub-push-triggered build clones the whole repo and
+  then `cd`s into `web/` before installing/building.
+- The local `.vercel/project.json` link lives at the **repo root**
+  (`/hackinhills/bayora-sandbox/.vercel`, gitignored), not inside `web/` —
+  so a manual CLI deploy goes through the same root-directory logic instead
+  of double-applying it.
+
+To deploy manually, always run from the repo root:
 
 ```bash
-npx serve dashboard
-# or: python3 -m http.server --directory dashboard 8080
+cd /hackinhills/bayora-sandbox
+npx vercel --prod
 ```
+
+Never run `vercel` from inside `web/` directly — with Root Directory set,
+Vercel will look for a `web` folder nested inside `web/` and fail.
 
 ## Verifying the audit log from the command line
 
@@ -103,13 +119,16 @@ exactly where the chain breaks.
 
 ## What this does NOT claim to do yet
 
-This is the Phase 0 pipe only. Not yet built: the Trust-Switch on/off toggle
-(isolation enabled vs. disabled, to show the score gap live), custom seccomp
-profiles, and real attack-payload sourcing from AdvBench/JailbreakBench. See
-the project brief and pitch deck in the parent `/hackinhills` folder for the
-full roadmap and the explicit threat model (what this protects against and
-what it doesn't — including the things role-based auth doesn't fix, like a
-fully compromised broker container).
+The dashboard's Trust Switch (sealed vs. leaky catch rate) is real where the
+"sealed" number is concerned, but the "leaky" comparison number is
+illustrative — it's not computed from an actual unblinded run, since that
+would require a second backend path where the blue team is given the
+original prompt (see `docs/PRD.md` Open Questions). Also not yet built:
+custom seccomp profiles and real attack-payload sourcing from
+AdvBench/JailbreakBench. See the project brief and pitch deck in the parent
+`/hackinhills` folder for the full roadmap and the explicit threat model
+(what this protects against and what it doesn't — including the things
+role-based auth doesn't fix, like a fully compromised broker container).
 
 ## Project structure
 
@@ -119,8 +138,8 @@ services/
   broker/                 # mediates red<->LLM<->blue, owns the audit log, enforces per-role auth
   red-team/                # fires hardcoded attack payloads (RED_TEAM_TOKEN only)
   blue-team/               # blind heuristic classifier (BLUE_TEAM_TOKEN only)
-dashboard/
-  index.html                # live static dashboard, polls the broker (AUDIT_TOKEN)
+web/
+  src/                      # the live React dashboard (see "Live dashboard" above)
 scripts/
   verify-log.js              # independent, HMAC-keyed audit-log integrity checker
 logs/
