@@ -1,6 +1,7 @@
 {
-  "buildCommand": "true",
-  "installCommand": "true",
-  "outputDirectory": "web-static",
-  "framework": null
+  "installCommand": "cd landing && npm ci",
+  "buildCommand": "cd landing && npm run build && mkdir -p dist/app && cp -r ../web-static/. dist/app/",
+  "outputDirectory": "landing/dist",
+  "framework": null,
+  "trailingSlash": true
 }

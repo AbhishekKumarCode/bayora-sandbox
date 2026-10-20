@@ -82,26 +82,6 @@ function eventLabel(e) {
   return e.event;
 }
 function isRunActive() { return Date.now() - state.lastEventAt < 9000; }
-// The stage holds the only <video>; it must survive innerHTML re-renders, so it is
-// parked in #stageHolder before each render and moved into #pipelineSlot after.
-function parkStage() {
-  const stage = $("#pipelineStage"), holder = $("#stageHolder");
-  if (stage && stage.parentElement !== holder) holder.appendChild(stage);
-}
-function mountStage() {
-  const stage = $("#pipelineStage"), slot = $("#pipelineSlot");
-  if (!stage) return;
-  if (slot) { slot.appendChild(stage); syncStage(); }
-  else $("#pipelineVideo").pause();
-}
-function syncStage() {
-  const stage = $("#pipelineStage"), video = $("#pipelineVideo"), active = isRunActive();
-  stage.classList.toggle("idle", !active);
-  $("#stagePill").classList.toggle("live", active);
-  $("#stageLabel").textContent = active ? "Run in progress" : state.connected ? "Idle — start a run to watch it" : "Broker unreachable";
-  if (active) { if (video.paused) video.play().catch(() => {}); }
-  else if (!video.paused) { video.pause(); video.currentTime = 0; }
-}
 function roomOf(event) {
   if (event === "attack_submitted") return "attacker";
   if (event === "llm_response_received" || event === "llm_error") return "model";
@@ -264,10 +244,10 @@ function miniArchitecture() {
 }
 function architectureFull() {
   return `<div class="architecture-full"><div class="arch-grid"></div><div class="arch-connection red-line"></div><div class="arch-connection blue-line"></div>
-    <div class="arch-node arch-attacker"><div class="node-cube red-cube">◎</div><strong>Attacker Room</strong><span>Fires a real adversarial prompt</span><em>ISOLATED</em></div>
-    <div class="arch-node arch-model"><div class="node-cube purple-cube">⬡</div><strong>Model under test</strong><span>Answers — unaware it's being tested</span><em>ISOLATED</em></div>
-    <div class="arch-node arch-defender"><div class="node-cube blue-cube">⬢</div><strong>Defender Room</strong><span>Scores the answer, never the attack</span><em>ISOLATED</em></div>
-    <div class="arch-lock lock-one">♙</div><div class="arch-lock lock-two">♙</div>
+    <div class="arch-node arch-attacker"><div class="node-cube red-cube">${ICONS.attacker}</div><strong>Attacker Room</strong><span>Fires a real adversarial prompt</span><em>ISOLATED</em></div>
+    <div class="arch-node arch-model"><div class="node-cube purple-cube">${ICONS.model}</div><strong>Model under test</strong><span>Answers — unaware it's being tested</span><em>ISOLATED</em></div>
+    <div class="arch-node arch-defender"><div class="node-cube blue-cube">${ICONS.defender}</div><strong>Defender Room</strong><span>Scores the answer, never the attack</span><em>ISOLATED</em></div>
+    <div class="arch-lock lock-one">${ICONS.lock}</div><div class="arch-lock lock-two">${ICONS.lock}</div>
     <div class="arch-caption"><span class="dot green"></span> Separate Docker networks · Broker-mediated only · No cross-tenant access</div></div>`;
 }
 function howItWorks() {
@@ -279,14 +259,37 @@ function howItWorks() {
   return `<div class="how-steps">${steps.map(([color, icon, title, body], i) => `<div class="how-step"><span class="how-num ${color}">${icon}</span><div><b>${title}</b><p>${body}</p></div></div>${i < steps.length - 1 ? '<div class="how-arrow">→</div>' : ""}`).join("")}</div>`;
 }
 function livePipelineArch() {
-  return `<div id="pipelineSlot"></div>`;
+  return `<div class="live-pipeline-arch" id="livePipelineArch"><div class="arch-grid"></div>
+    <div class="arch-connection live-red-line"><span class="data-pulse" id="pulseAM"></span></div>
+    <div class="arch-connection live-blue-line"><span class="data-pulse" id="pulseMD"></span></div>
+    <div class="arch-node live-attacker" id="nodeAttacker"><div class="node-cube red-cube">${ICONS.attacker}</div><strong>Attacker</strong><span>Adversarial prompts</span><em>ISOLATED</em></div>
+    <div class="arch-node live-model" id="nodeModel"><div class="node-cube purple-cube">${ICONS.model}</div><strong>Model under test</strong><span>Client LLM</span><em>ISOLATED</em></div>
+    <div class="arch-node live-defender" id="nodeDefender"><div class="node-cube blue-cube">${ICONS.defender}</div><strong>Defender</strong><span>Safety evaluation</span><em>ISOLATED</em></div>
+    <div class="arch-lock live-lock-one">${ICONS.lock}</div><div class="arch-lock live-lock-two">${ICONS.lock}</div>
+    <div class="arch-caption"><span class="dot ${state.connected ? "green" : ""}"></span> <span id="stageEvent">${isRunActive() ? "Run in progress" : "Live — pulses travel as real events arrive"}</span></div></div>`;
+}
+function triggerPulse(el) {
+  if (!el) return;
+  el.classList.remove("run");
+  void el.offsetWidth;
+  el.classList.add("run");
+}
+function pulseCube(id) {
+  const cube = document.querySelector(`#${id} .node-cube`);
+  if (!cube) return;
+  cube.classList.remove("pulse");
+  void cube.offsetWidth;
+  cube.classList.add("pulse");
 }
 function animateLivePipeline(freshEntries) {
-  const el = $("#stageEvent");
-  if (!el || !freshEntries.length) return;
-  const last = freshEntries[freshEntries.length - 1];
-  el.textContent = eventLabel(last);
-  el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash");
+  if (!$("#livePipelineArch")) return;
+  for (const e of freshEntries) {
+    if (e.event === "attack_submitted") { pulseCube("nodeAttacker"); triggerPulse($("#pulseAM")); }
+    else if (e.event === "llm_response_received" || e.event === "llm_error") { pulseCube("nodeModel"); }
+    else if (e.event === "blue_team_verdict") { pulseCube("nodeDefender"); triggerPulse($("#pulseMD")); }
+  }
+  const label = $("#stageEvent");
+  if (label && freshEntries.length) label.textContent = eventLabel(freshEntries[freshEntries.length - 1]);
 }
 function recentFromEntries() {
   const attacks = state.entries.filter((e) => e.event === "attack_submitted").slice(-5).reverse();
@@ -325,10 +328,7 @@ function overview() {
         <div class="hero-stat"><span class="hero-stat-icon purple">${ICONS.ledger}</span><div><b>${state.entries.length}</b><span>Sealed events</span></div></div>
       </div>
     </div>
-    <button class="hero-visual" data-page="live-testing" aria-label="Open live testing">
-      <img src="assets/pipeline-poster.jpg" alt="Red team, model under test and blue team as isolated glass rooms">
-      <span class="play-badge"><span class="dot ${running ? "red" : "green"}"></span>${running ? "Run in progress — watch live" : "Watch the pipeline run"}</span>
-    </button>
+    <div class="hero-visual">${architectureFull()}<button class="play-badge" data-page="live-testing"><span class="dot ${running ? "red" : "green"}"></span>${running ? "Run in progress — watch live" : "Watch the pipeline run"}</button></div>
   </section>
   ${howItWorks()}
   <div class="metric-grid">${metric(ICONS.attacker,"Attacks tested",stats.attacksTested,`Across ${dist.length} techniques`,"red")}${metric(ICONS.defender,"Attacks caught",stats.caught,`${stats.catchRate}% catch rate`,"blue")}${metric(ICONS.lock,"Gap if unsealed",`${stats.illustrativeLeakyRate - stats.catchRate} pts`,"Illustrative — see Settings","purple")}${metric(ICONS.ledger,"Verdicts scored",`${stats.verdictsSoFar}/${stats.attacksTested}`,stats.attacksTested ? `${Math.round((stats.verdictsSoFar/stats.attacksTested)*100)}% evaluated` : "0% evaluated","green")}</div>
@@ -405,9 +405,7 @@ function render() {
     "defense-lab":defenseLab, "audit-logs":auditLogs, analytics, reports,
     settings:settingsPage, "testing-rooms":testingRooms
   };
-  parkStage();
   $("#pageContent").innerHTML = views[state.page]();
-  mountStage();
 }
 function navigate(page) {
   if (!titles[page]) return;
