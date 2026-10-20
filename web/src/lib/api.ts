@@ -1,50 +1,59 @@
-// Talks to the real broker (services/broker). This dashboard holds only the
-// AUDIT_TOKEN — the same trust level as the broker's /audit endpoint itself.
-// It never has RED_TEAM_TOKEN or BLUE_TEAM_TOKEN, by design.
+// Talks to the real broker (services/broker). This app only ever holds the
+// AUDIT_TOKEN, and only after the user explicitly connects. It never holds
+// RED_TEAM_TOKEN or BLUE_TEAM_TOKEN, by design.
 
-const BROKER_URL = import.meta.env.VITE_BROKER_URL || "http://localhost:4000";
+export const BROKER_URL: string =
+  import.meta.env.VITE_BROKER_URL || "https://meal-argued-successful-gentle.trycloudflare.com";
 
-function getAuditToken(): string {
-  let token: string = sessionStorage.getItem("bayora_audit_token") || "";
-  if (!token) {
-    // VITE_* vars are inlined into the public JS bundle at build time — so
-    // VITE_AUDIT_TOKEN must NEVER be read in a production build, even if
-    // it's set locally for dev convenience or accidentally added to a
-    // deployment's env vars. In prod, always prompt in-browser instead;
-    // the token then only ever lives in this tab's sessionStorage.
-    const devOnlyToken = import.meta.env.PROD ? undefined : import.meta.env.VITE_AUDIT_TOKEN;
-    token = devOnlyToken || window.prompt("Enter AUDIT_TOKEN (from your .env file):") || "";
-    if (token) sessionStorage.setItem("bayora_audit_token", token);
-  }
-  return token;
+const TOKEN_KEY = "bayora_audit_token";
+
+export function getStoredToken(): string {
+  try { return sessionStorage.getItem(TOKEN_KEY) || ""; } catch { return ""; }
+}
+export function storeToken(token: string) {
+  try { sessionStorage.setItem(TOKEN_KEY, token); } catch { /* ignore */ }
+}
+export function clearToken() {
+  try { sessionStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ }
 }
 
 function authHeaders(): HeadersInit {
-  return { authorization: `Bearer ${getAuditToken()}` };
+  return { authorization: `Bearer ${getStoredToken()}` };
 }
+
+export type AuditEvent = "attack_submitted" | "llm_response_received" | "blue_team_verdict" | "llm_error";
+export type Verdict = "blocked" | "passed_through" | "ambiguous";
 
 export type AuditEntry = {
   seq: number;
   ts: string;
-  event: "attack_submitted" | "llm_response_received" | "blue_team_verdict" | "llm_error";
-  data: Record<string, unknown>;
+  event: AuditEvent;
+  data: {
+    attackId?: string;
+    technique?: string;
+    responsePreview?: string;
+    mock?: boolean;
+    verdict?: Verdict;
+    confidence?: number;
+    notes?: string;
+    error?: string;
+  };
   prevHash: string;
   hash: string;
 };
 
+export class ForbiddenError extends Error {}
+
 export async function getHealth(): Promise<{ ok: boolean; mockMode: boolean }> {
   const res = await fetch(`${BROKER_URL}/health`);
-  if (!res.ok) throw new Error(`health check failed: ${res.status}`);
+  if (!res.ok) throw new Error(`health ${res.status}`);
   return res.json();
 }
 
 export async function getAudit(): Promise<{ count: number; entries: AuditEntry[] }> {
   const res = await fetch(`${BROKER_URL}/audit`, { headers: authHeaders() });
-  if (res.status === 403) {
-    sessionStorage.removeItem("bayora_audit_token");
-    throw new Error("forbidden — bad AUDIT_TOKEN");
-  }
-  if (!res.ok) throw new Error(`audit fetch failed: ${res.status}`);
+  if (res.status === 401 || res.status === 403) throw new ForbiddenError("bad AUDIT_TOKEN");
+  if (!res.ok) throw new Error(`audit ${res.status}`);
   return res.json();
 }
 
@@ -55,17 +64,15 @@ export type VerifyResult =
 export async function verifyChain(simulateTamperSeq?: number): Promise<VerifyResult> {
   const qs = simulateTamperSeq != null ? `?simulateTamperSeq=${simulateTamperSeq}` : "";
   const res = await fetch(`${BROKER_URL}/verify${qs}`, { headers: authHeaders() });
-  if (!res.ok) throw new Error(`verify failed: ${res.status}`);
+  if (res.status === 401 || res.status === 403) throw new ForbiddenError("bad AUDIT_TOKEN");
+  if (!res.ok) throw new Error(`verify ${res.status}`);
   return res.json();
 }
 
 export async function triggerRun(): Promise<{ status: string }> {
   const res = await fetch(`${BROKER_URL}/trigger-run`, { method: "POST", headers: authHeaders() });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.error || `trigger-run failed: ${res.status}`);
+  const json = await res.json().catch(() => ({}));
+  if (res.status === 401 || res.status === 403) throw new ForbiddenError("bad AUDIT_TOKEN");
+  if (!res.ok) throw new Error(json.error || `trigger-run ${res.status}`);
   return json;
-}
-
-export function isForbiddenError(err: unknown): boolean {
-  return err instanceof Error && err.message.includes("forbidden");
 }

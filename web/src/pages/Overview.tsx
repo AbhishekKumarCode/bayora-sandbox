@@ -1,195 +1,148 @@
-import { useEffect, useState } from "react";
-import { ShieldCheck, TrendingDown, Target, Bot } from "lucide-react";
-import { getAudit, type AuditEntry } from "../lib/api";
-import { computeStats } from "../lib/stats";
-import { useCountUp } from "../lib/useCountUp";
-import { Card, PageHead, ScoreRing } from "../components/ui";
-import ActivityFeed from "../components/ActivityFeed";
-import RoomCard from "../components/RoomCard";
-import AttackPipeline from "../components/AttackPipeline";
+import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { ArrowRight, ShieldCheck, ShieldAlert, Play, Radio } from "lucide-react";
+import { useStore, useNow } from "@/lib/store";
+import { deriveRuns, overallStats, isLive, fmtAgo, techniqueLabel, verdictLabel } from "@/lib/model";
+import { Button, Card, Pill, SectionTitle, Stat, Actor, Hash, verdictTone, cx } from "@/components/ui";
+import type { VerifyResult } from "@/lib/api";
 
-function Kpi({ label, value, sub }: { label: string; value: number | string; sub: string }) {
-  const numeric = typeof value === "number" ? value : parseInt(String(value).match(/^-?\d+/)?.[0] ?? "0", 10);
-  const animated = useCountUp(Number.isFinite(numeric) ? numeric : 0);
-  const suffix = typeof value === "string" ? value.replace(/^-?\d+/, "") : "";
-  return (
-    <div className="p-5 md:p-6">
-      <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="font-display mt-1.5 text-[32px] font-semibold leading-none tabular-nums">
-        {animated}
-        {suffix}
-      </p>
-      <p className="mt-2 text-xs text-muted-foreground">{sub}</p>
-    </div>
-  );
-}
+export function Overview() {
+  const s = useStore();
+  const now = useNow(1000);
+  const runs = useMemo(() => deriveRuns(s.entries, now), [s.entries, now]);
+  const stats = useMemo(() => overallStats(s.entries), [s.entries]);
+  const live = isLive(s.entries, now);
+  const [verify, setVerify] = useState<VerifyResult | null>(null);
+  const [verifying, setVerifying] = useState(false);
+  const last = s.entries[s.entries.length - 1];
 
-export default function Overview() {
-  const [entries, setEntries] = useState<AuditEntry[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [sealed, setSealed] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function poll() {
-      try {
-        const { entries } = await getAudit();
-        if (!cancelled) {
-          setEntries(entries);
-          setError(null);
-        }
-      } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "could not reach broker");
-      }
-    }
-    poll();
-    const id = setInterval(poll, 2000);
-    return () => {
-      cancelled = true;
-      clearInterval(id);
-    };
-  }, []);
-
-  const stats = computeStats(entries);
-  const shown = sealed ? stats.catchRate : stats.illustrativeLeakyRate;
-  const gap = stats.illustrativeLeakyRate - stats.catchRate;
+  async function doVerify() {
+    setVerifying(true);
+    try { setVerify(await s.verify()); } finally { setVerifying(false); }
+  }
 
   return (
-    <div className="flex flex-col gap-6 stagger">
-      <div className="max-md:hidden">
-        <PageHead title="Overview" sub="Is your AI actually safe? Here's the evidence, not just the claim." />
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-[24px] font-semibold tracking-tight">Overview</h1>
+          <p className="mt-1 text-[13.5px] text-muted">
+            {s.source === "demo" ? "Showing demo data. Connect a broker from the sidebar to see real runs." : `Live from the broker · last poll ${s.lastPollAt ? fmtAgo(new Date(s.lastPollAt).toISOString(), now) : "…"}`}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="secondary" to="/app/live"><Radio size={15} /> Live run</Button>
+          <Button to="/app/live"><Play size={15} /> Start a run</Button>
+        </div>
       </div>
 
-      {error && (
-        <Card className="border-destructive/40 bg-destructive/5 text-destructive text-sm">
-          Can't reach the broker right now — is it running? ({error})
-        </Card>
-      )}
+      {s.error && <div className="rounded-[10px] border border-attack/30 bg-attack-soft px-4 py-2.5 text-[13px] text-attack">{s.error}</div>}
 
-      <section className="grid text-white lg:grid-cols-[1.05fr_1fr]">
-        <div className="flex flex-col rounded-t-3xl bg-hero p-7 md:p-9 lg:rounded-3xl lg:rounded-tr-none">
-          <div className="flex items-start justify-between gap-4">
-            <p className="text-sm text-white/70">Trust Switch</p>
-            <button
-              onClick={() => setSealed((s) => !s)}
-              className={`relative w-11 h-6 rounded-full transition-colors ${sealed ? "bg-caught" : "bg-leak"}`}
-              aria-label="Toggle sealed/leaky"
-            >
-              <span
-                className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
-                  sealed ? "translate-x-[22px]" : "translate-x-0.5"
-                }`}
-              />
-            </button>
+      {/* Chain status banner */}
+      <Card className="p-5" glow={verify && !verify.ok ? "attack" : "sealed"}>
+        <div className="flex flex-wrap items-center gap-4">
+          <div className={cx("flex h-12 w-12 items-center justify-center rounded-[12px]", verify && !verify.ok ? "bg-attack-soft text-attack" : "bg-sealed-soft text-sealed")}>
+            {verify && !verify.ok ? <ShieldAlert size={22} /> : <ShieldCheck size={22} />}
           </div>
-          <div className="mt-3 flex items-end gap-4">
-            <ScoreRing value={shown} size={72} tone={sealed ? "caught" : "leak"} dark />
-            <h2 className="text-[34px] font-semibold leading-[1.08] md:text-[40px]">
-              {sealed ? "Sealed" : "Leaky"}
-            </h2>
+          <div className="min-w-0 flex-1">
+            <div className="text-[15px] font-semibold">
+              {verify == null ? "Audit chain not verified yet" : verify.ok ? `Chain intact · ${verify.count} entries` : `Chain broken at entry ${verify.brokenAtSeq}`}
+            </div>
+            <div className="mt-0.5 text-[13px] text-muted">
+              {verify == null && last && <>Latest entry {last.seq} · <Hash value={last.hash} /> · HMAC-SHA256 chained</>}
+              {verify?.ok && <>Final hash <Hash value={verify.finalHash} /> recomputed and matched.</>}
+              {verify && !verify.ok && <>Reason: {verify.reason}. Every later entry inherits the break.</>}
+            </div>
           </div>
-          <p className="mt-4 max-w-md text-[15px] leading-relaxed text-white/80">
-            {sealed
-              ? "This is the real, verified catch rate — the defender never sees the attack prompt."
-              : "Illustrative: what the score would look like if grading weren't isolated. Looks safer than it is."}
-          </p>
-          <dl className="mt-6 grid grid-cols-3 gap-4 border-t border-white/20 pt-5">
-            <div>
-              <dt className="text-xs text-white/60">Attacks tried</dt>
-              <dd className="font-display mt-1 text-2xl font-semibold tabular-nums">{stats.attacksTested}</dd>
+          <div className="flex items-center gap-2">
+            {live && <Pill tone="attack" dot>Run in progress</Pill>}
+            <Button variant="secondary" onClick={doVerify} disabled={verifying}>{verifying ? "Verifying…" : "Verify chain"}</Button>
+          </div>
+        </div>
+      </Card>
+
+      {/* Stats */}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Stat label="Attacks fired" value={stats.attacks} sub={`${runs.length} run${runs.length === 1 ? "" : "s"} recorded`} tone="attack" />
+        <Stat label="Catch rate" value={`${stats.catchRate}%`} sub={`${stats.blocked} blocked of ${stats.judged} judged`} tone="sealed">
+          <div className="mt-3 flex h-1.5 overflow-hidden rounded-full bg-canvas">
+            <span className="bg-sealed" style={{ width: `${stats.judged ? (stats.blocked / stats.judged) * 100 : 0}%` }} />
+            <span className="bg-pending" style={{ width: `${stats.judged ? (stats.ambiguous / stats.judged) * 100 : 0}%` }} />
+            <span className="bg-attack" style={{ width: `${stats.judged ? (stats.passed / stats.judged) * 100 : 0}%` }} />
+          </div>
+        </Stat>
+        <Stat label="Got through" value={stats.passed} sub={`${stats.ambiguous} unsure`} tone="judge" />
+        <Stat label="Chain length" value={s.entries.length} sub={last ? `last entry ${fmtAgo(last.ts, now)}` : "empty"} tone="brand" />
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-5">
+        {/* Recent runs */}
+        <div className="lg:col-span-3">
+          <SectionTitle title="Recent runs" right={<Link to="/app/runs" className="flex items-center gap-1 text-[13px] font-medium text-brand hover:underline">All runs <ArrowRight size={14} /></Link>} />
+          <Card>
+            <div className="divide-y divide-line">
+              {runs.slice(0, 5).map((r) => (
+                <Link key={r.id} to={`/app/runs/${r.id}`} className="flex items-center gap-4 px-5 py-3.5 hover:bg-canvas">
+                  <div className="w-16 text-[13px] font-semibold">Run {r.index}</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[13px]">{r.attacks.length} attacks · {fmtAgo(r.startedAt, now)}</div>
+                    <div className="mt-1.5 flex h-1.5 w-full max-w-[220px] overflow-hidden rounded-full bg-canvas">
+                      <span className="bg-sealed" style={{ width: `${(r.blocked / r.attacks.length) * 100}%` }} />
+                      <span className="bg-pending" style={{ width: `${(r.ambiguous / r.attacks.length) * 100}%` }} />
+                      <span className="bg-attack" style={{ width: `${(r.passed / r.attacks.length) * 100}%` }} />
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[15px] font-semibold tabular-nums">{r.catchRate}%</div>
+                    <div className="text-[11px] text-muted">caught</div>
+                  </div>
+                  {r.live ? <Pill tone="attack" dot>Live</Pill> : <Pill tone="sealed">Sealed</Pill>}
+                </Link>
+              ))}
+              {runs.length === 0 && <div className="px-5 py-10 text-center text-[13px] text-muted">No runs yet.</div>}
             </div>
-            <div>
-              <dt className="text-xs text-white/60">Caught</dt>
-              <dd className="font-display mt-1 text-2xl font-semibold tabular-nums">{stats.caught}</dd>
-            </div>
-            <div>
-              <dt className="text-xs text-white/60">Gap if unsealed</dt>
-              <dd className="font-display mt-1 text-2xl font-semibold tabular-nums">
-                {gap}
-                <span className="text-base font-medium text-white/50"> pts</span>
-              </dd>
-            </div>
-          </dl>
+          </Card>
         </div>
 
-        <div className="flex flex-col">
-          <div className="flex items-start justify-between gap-4 bg-hero px-7 pb-6 pt-7 md:px-9 md:pt-9 lg:rounded-tr-3xl">
-            <div>
-              <h3 className="text-lg font-semibold">The three rooms</h3>
-              <p className="mt-1 text-sm text-white/70">Separate keys, one hallway, no shortcuts.</p>
+        {/* Techniques */}
+        <div className="lg:col-span-2">
+          <SectionTitle title="By technique" desc="Catch rate per attack family" />
+          <Card className="p-5">
+            <div className="space-y-3.5">
+              {stats.byTechnique.slice(0, 7).map((t) => (
+                <div key={t.technique}>
+                  <div className="flex items-center justify-between text-[13px]">
+                    <span className="font-medium">{techniqueLabel(t.technique)}</span>
+                    <span className="tabular-nums text-muted">{t.blocked}/{t.total}</span>
+                  </div>
+                  <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-canvas">
+                    <div className="h-full rounded-full bg-gradient-to-r from-judge to-sealed" style={{ width: `${(t.blocked / t.total) * 100}%` }} />
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
-          <div className="relative flex flex-1">
-            <span aria-hidden className="absolute left-0 top-0 size-8 bg-hero" />
-            <div className="relative flex flex-1 flex-col rounded-b-3xl bg-white p-7 text-foreground md:p-9 lg:rounded-tl-[2rem]">
-              <div className="grid flex-1 gap-3">
-                <RoomCard
-                  icon={Target}
-                  title="Attacker room"
-                  description="Invents tricky prompts to trip up the model."
-                  agentLabel="Red-team agent v4"
-                  tone="attacker"
-                />
-                <RoomCard
-                  icon={Bot}
-                  title="Model under test"
-                  description="Answers whatever it's given, with no idea it's being tested."
-                  agentLabel="Subject model v1"
-                  tone="default"
-                />
-                <RoomCard
-                  icon={ShieldCheck}
-                  title="Defender room"
-                  description="Judges answers as safe or not — never sees the question."
-                  agentLabel="Safety judge v2"
-                  tone="defender"
-                />
+          </Card>
+        </div>
+      </div>
+
+      {/* Latest verdicts strip */}
+      <div>
+        <SectionTitle title="Latest verdicts" desc="What the blind judge decided most recently" />
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {[...s.entries].filter((e) => e.event === "blue_team_verdict").slice(-6).reverse().map((e) => (
+            <Card key={e.seq} className="p-4">
+              <div className="flex items-center gap-3">
+                <Actor kind="judge" size={30} />
+                <div className="min-w-0 flex-1">
+                  <div className="text-[13px] font-semibold">{verdictLabel(e.data.verdict)}</div>
+                  <div className="truncate text-[12px] text-muted">{e.data.notes || "no notes"}</div>
+                </div>
+                <Pill tone={verdictTone(e.data.verdict)}>{Math.round((e.data.confidence ?? 0) * 100)}%</Pill>
               </div>
-            </div>
-          </div>
+            </Card>
+          ))}
         </div>
-      </section>
-
-      <section className="grid grid-cols-2 divide-border rounded-card border border-border bg-card lg:grid-cols-4 lg:divide-x [&>*:nth-child(-n+2)]:border-b [&>*:nth-child(-n+2)]:border-border lg:[&>*:nth-child(-n+2)]:border-b-0">
-        <Kpi label="Attacks tried" value={stats.attacksTested} sub="this run" />
-        <Kpi label="Caught" value={stats.caught} sub={`${stats.gotThrough} got through · ${stats.unsure} unsure`} />
-        <Kpi label="Catch rate" value={`${stats.catchRate}%`} sub="the real number" />
-        <Kpi label="Verdicts scored" value={`${stats.verdictsSoFar} / ${stats.attacksTested}`} sub="blind evaluation" />
-      </section>
-
-      <section className="grid divide-border rounded-card border border-border bg-card md:grid-cols-3 md:divide-x">
-        <div className="flex gap-3 p-5">
-          <Target size={18} className="mt-0.5 shrink-0 text-attacker" />
-          <div>
-            <p className="text-sm font-semibold">Blind by design</p>
-            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-              The defender only ever sees the model's answer, never the attack prompt — enforced in code.
-            </p>
-          </div>
-        </div>
-        <div className="flex gap-3 p-5">
-          <ShieldCheck size={18} className="mt-0.5 shrink-0 text-defender" />
-          <div>
-            <p className="text-sm font-semibold">Tamper-evident</p>
-            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-              Every event is HMAC-chained. Edit one line and Verify points straight at it.
-            </p>
-          </div>
-        </div>
-        <div className="flex gap-3 p-5">
-          <TrendingDown size={18} className="mt-0.5 shrink-0 text-leak" />
-          <div>
-            <p className="text-sm font-semibold">The gap is the point</p>
-            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-              Most safety claims can't prove the grading wasn't rigged. The Trust Switch makes that visible.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <AttackPipeline entries={entries} />
-
-      <ActivityFeed entries={entries} limit={8} />
+      </div>
     </div>
   );
 }
