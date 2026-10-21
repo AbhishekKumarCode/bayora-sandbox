@@ -88,7 +88,7 @@ export function Audit() {
               <div className="display text-[16px]">Try to tamper</div>
               <div className="mt-1 text-[12.5px] font-semibold text-ink-2">Pick an entry and pretend it was edited. The broker shows where verification would fail. The real record is untouched.</div>
               <div className="mt-3 flex items-center gap-2">
-                <input type="number" min={1} max={s.entries.length} value={tamperSeq} onChange={(e) => setTamperSeq(e.target.value === "" ? "" : Number(e.target.value))} placeholder={`entry 1–${s.entries.length}`} className="b-input h-11 w-40" />
+                <input id="tamper-seq" aria-label="Entry number to tamper with" type="number" min={1} max={s.entries.length} value={tamperSeq} onChange={(e) => setTamperSeq(e.target.value === "" ? "" : Number(e.target.value))} placeholder={`entry 1–${s.entries.length}`} className="b-input h-11 w-40" />
                 <Button onClick={() => run("tamper")} disabled={busy != null}>{busy === "tamper" ? "Checking…" : "Tamper → verify"}</Button>
               </div>
             </div>
@@ -108,7 +108,7 @@ export function Audit() {
 
       {/* Entries */}
       <div className="relative">
-        <div className="absolute left-[27px] top-4 bottom-4 w-[3px] bg-ink" aria-hidden />
+        <div className="absolute left-[27px] top-4 bottom-4 w-[2px] rounded-full bg-line-strong" aria-hidden />
         <div className="space-y-4">
           {entries.map((e) => {
             const meta = EVENT[e.event];
@@ -117,7 +117,7 @@ export function Audit() {
             return (
               <div id={`seq-${e.seq}`} key={e.seq} className={cx("b-card relative flex items-start gap-4 p-4", isBreak && "bg-red text-white")} style={broken ? { boxShadow: "0 0 0 1.5px var(--color-red-2)" } : undefined}>
                 <div className="relative z-10 flex w-[22px] shrink-0 justify-center pt-1">
-                  <span className={cx("h-4 w-4 border border-line", broken ? "bg-red" : "bg-green")} />
+                  <span className={cx("h-3.5 w-3.5 rounded-full ring-4 ring-white", broken ? "bg-red-2" : "bg-green-2")} />
                 </div>
                 <Actor kind={meta.actor} size={32} />
                 <div className="min-w-0 flex-1">
@@ -152,8 +152,8 @@ function ChainVisual({ entries, brokenAt, onJump }: { entries: AuditEntry[]; bro
   const shown = entries.slice(-60); // keep it legible
   const hidden = entries.length - shown.length;
   return (
-    <div className="overflow-x-auto pb-1 pt-3">
-      <div className="flex min-w-max items-center gap-0">
+    <div className="pb-1 pt-3 sm:overflow-x-auto">
+      <div className="flex flex-wrap items-center gap-1.5 sm:min-w-max sm:flex-nowrap sm:gap-0">
         {hidden > 0 && <span className="label mr-2 text-muted">+{hidden} earlier</span>}
         {shown.map((e, i) => {
           const broken = brokenAt != null && e.seq >= brokenAt;
@@ -161,9 +161,9 @@ function ChainVisual({ entries, brokenAt, onJump }: { entries: AuditEntry[]; bro
           const color = broken ? "var(--color-red)" : EVENT[e.event].color;
           return (
             <div key={e.seq} className="flex items-center">
-              {i > 0 && <span className="h-[2px] w-3" style={{ background: broken ? "var(--color-red-2)" : "var(--color-line-strong)" }} />}
-              <button onClick={() => onJump(e.seq)} title={`#${e.seq} ${EVENT[e.event].label}`} className={cx("relative h-8 w-5 rounded-[4px] transition-transform hover:-translate-y-1", isBreak && "outline outline-2 outline-red-2")} style={{ background: color, opacity: broken && !isBreak ? 0.6 : 1 }}>
-                {e.event === "blue_team_verdict" && e.data.verdict === "passed_through" && !broken && <span className="absolute -top-2 left-1/2 h-2 w-2 -translate-x-1/2 border border-ink bg-red" title="got through" />}
+              {i > 0 && <span className="hidden h-[2px] w-3 sm:block" style={{ background: broken ? "var(--color-red-2)" : "var(--color-line-strong)" }} />}
+              <button onClick={() => onJump(e.seq)} title={`#${e.seq} ${EVENT[e.event].label}`} className={cx("relative h-10 w-8 rounded-[6px] transition-transform hover:-translate-y-1 sm:h-8 sm:w-5 sm:rounded-[4px]", isBreak && "outline outline-2 outline-red-2")} style={{ background: color, opacity: broken && !isBreak ? 0.6 : 1 }}>
+                {e.event === "blue_team_verdict" && e.data.verdict === "passed_through" && !broken && <span className="absolute -top-2 left-1/2 h-2 w-2 -translate-x-1/2 rounded-full bg-red-2" title="got through" />}
               </button>
             </div>
           );
@@ -171,7 +171,7 @@ function ChainVisual({ entries, brokenAt, onJump }: { entries: AuditEntry[]; bro
       </div>
       <div className="label mt-2 flex justify-between text-muted">
         <span>#{shown[0]?.seq ?? 0} oldest</span>
-        <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full border border-ink bg-red" /> above a verdict = got through</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full bg-red-2" /> above a verdict = got through</span>
         <span>#{shown[shown.length - 1]?.seq ?? 0} newest</span>
       </div>
     </div>

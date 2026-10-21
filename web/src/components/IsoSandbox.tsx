@@ -46,7 +46,7 @@ function Box({ x, y, z = 0, w, d, h, top, left, right, ox, oy, s, label, sub, ho
   const halo = [P(x - 1.5, y - 1.5, 0.05), P(x + w + 1.5, y - 1.5, 0.05), P(x + w + 1.5, y + d + 1.5, 0.05), P(x - 1.5, y + d + 1.5, 0.05)];
   return (
     <g>
-      <polygon points={pts(halo)} fill="#5b6cff" style={{ opacity: hot ? 0.14 : 0, transition: "opacity .6s ease" }} />
+      <polygon points={pts(halo)} fill="#4a5be6" style={{ opacity: hot ? 0.14 : 0, transition: "opacity .6s ease" }} />
       <g style={{ transformOrigin: `${base[0]}px ${base[1]}px`, transform: hot ? "scale(1.03)" : "scale(1)", transition: "transform .6s cubic-bezier(.34,1.56,.64,1)" }}>
         <polygon points={pts(L)} fill={left} stroke={INK} strokeWidth={stroke} strokeLinejoin="round" />
         <polygon points={pts(R)} fill={right} stroke={INK} strokeWidth={stroke} strokeLinejoin="round" />
@@ -61,7 +61,7 @@ function Box({ x, y, z = 0, w, d, h, top, left, right, ox, oy, s, label, sub, ho
 function Marker({ at, n, active }: { at: readonly [number, number]; n: number; active: boolean }) {
   return (
     <g style={{ transition: "opacity .4s, transform .5s cubic-bezier(.34,1.56,.64,1)", transformOrigin: `${at[0]}px ${at[1]}px`, transform: active ? "scale(1.15)" : "scale(1)" }} opacity={active ? 1 : 0.55}>
-      <circle cx={at[0]} cy={at[1]} r={9} fill={active ? "#5b6cff" : "#fff"} stroke={active ? "#5b6cff" : INK} strokeWidth={1.3} />
+      <circle cx={at[0]} cy={at[1]} r={9} fill={active ? "#4a5be6" : "#fff"} stroke={active ? "#4a5be6" : INK} strokeWidth={1.3} />
       <text x={at[0]} y={at[1] + 3.5} textAnchor="middle" fontFamily="Public Sans, sans-serif" fontWeight="700" fontSize={10} fill={active ? "#fff" : INK}>{n}</text>
     </g>
   );
@@ -165,7 +165,7 @@ export function IsoSandbox({ stage = "idle", through = 0, total = 0, model, clas
         </g>
       ))}
       {/* hallway */}
-      <Box x={20} y={4} w={14} d={8} h={5} top="#d2c8f5" left="#ab9de0" right="#bfb2ea" ox={ox} oy={oy} s={s} label="Hallway" sub={model ? model.slice(0, 18) : "broker"} hot={stage === "judge"} />
+      <Box x={20} y={4} w={14} d={8} h={5} top="#d2c8f5" left="#ab9de0" right="#bfb2ea" ox={ox} oy={oy} s={s} label="Hallway" sub={model ? (model.split("/").pop() ?? model).slice(0, 14) : "broker"} hot={stage === "judge"} />
       <g transform={`translate(${P(27, 12, 2.5)[0] - 6} ${P(27, 12, 2.5)[1] - 8})`}>
         <rect x="0" y="6" width="12" height="9" rx="1.5" fill="#e9d99a" stroke={INK} strokeWidth="1.3" />
         <path d="M3 6V4a3 3 0 0 1 6 0v2" fill="none" stroke={INK} strokeWidth="1.3" />
@@ -210,7 +210,7 @@ export function StageSteps({ stage, compact = false }: { stage: Stage; compact?:
           <li key={st.key} className="flex items-center gap-2 text-[13px]" title={st.desc}>
             <span className={cx("flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold transition-all duration-300", active ? "scale-110 bg-accent text-white" : done ? "bg-green text-ink" : "bg-white text-ink-2 ring-1 ring-line")}>{st.n}</span>
             <span className={cx("font-semibold transition-colors", active ? "text-ink" : "text-muted")}>{st.title}</span>
-            {i < STAGE_STEPS.length - 1 && <span className="ml-2 h-px w-5 bg-line-strong" />}
+            {i < STAGE_STEPS.length - 1 && !compact && <span className="ml-2 h-px w-5 bg-line-strong" />}
           </li>
         );
       })}

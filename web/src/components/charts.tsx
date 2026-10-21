@@ -41,7 +41,7 @@ export function VerdictRing({ blocked, passed, ambiguous, pending = 0, size = 16
 export function VerdictStrip({ verdicts, size = 14, gap = 4, className }: { verdicts: Array<Verdict | "pending" | "error">; size?: number; gap?: number; className?: string }) {
   return (
     <div className={cx("flex flex-wrap", className)} style={{ gap }}>
-      {verdicts.map((v, i) => <span key={i} title={v} className="block border border-line" style={{ width: size, height: size, background: VERDICT_COLOR[v], boxShadow: "2px 2px 0 var(--color-ink)" }} />)}
+      {verdicts.map((v, i) => <span key={i} title={v} className="block rounded-[4px]" style={{ width: size, height: size, background: VERDICT_COLOR[v] }} />)}
     </div>
   );
 }
@@ -67,8 +67,8 @@ export function TrendArea({ points, height = 140, className, labels }: { points:
 /* ---------- Horizontal bar ---------- */
 export function HBar({ value, max = 100, color = "var(--color-green)", height = 14, className }: { value: number; max?: number; color?: string; height?: number; className?: string }) {
   return (
-    <div className={cx("w-full border border-line bg-white", className)} style={{ height }}>
-      <div className="h-full border-r-2 border-ink" style={{ width: `${Math.min(100, (value / max) * 100)}%`, background: color, transition: "width .4s" }} />
+    <div className={cx("w-full overflow-hidden rounded-full bg-ink/10", className)} style={{ height }}>
+      <div className="h-full rounded-full" style={{ width: `${Math.min(100, (value / max) * 100)}%`, background: color, transition: "width .4s" }} />
     </div>
   );
 }
@@ -92,7 +92,7 @@ export function Gauge({ pct, size = 64, stroke = 10 }: { pct: number; size?: num
 }
 
 export function Cell({ v, title }: { v?: Verdict | "pending"; title?: string }) {
-  return <span title={title} className="block h-6 w-6 border border-line" style={{ background: v ? VERDICT_COLOR[v] : "#fff", boxShadow: v ? "2px 2px 0 var(--color-ink)" : "none" }} />;
+  return <span title={title} className="block h-6 w-6 rounded-[6px]" style={{ background: v ? VERDICT_COLOR[v] : "rgb(255 255 255 / .7)", boxShadow: "0 0 0 1px var(--color-line)" }} />;
 }
 
 export function Legend({ items, className }: { items: Array<{ color: string; label: string; n?: number }>; className?: string }) {

@@ -285,21 +285,36 @@ app.get("/audit", requireToken(AUDIT_TOKEN, VIEWER_TOKEN), async (req, res) => {
     // blank-rendering filler) into a wildcard "?" that matches any marker
     // character. Unknown confusables therefore trigger a withhold, never a
     // bypass. Punctuation is dropped.
-    const LOOKALIKE = { "а": "a", "е": "e", "о": "o", "р": "p", "с": "c", "у": "y", "х": "x", "і": "i", "ј": "j", "ѕ": "s", "0": "o", "1": "l", "5": "s" };
+    // ASCII confusable classes (applied to marker AND text): i/l/1/|/!, o/0,
+    // s/5/$, b/8, z/2, g/q/9, a/4/@, e/3, t/7/+.
+    const FOLD = { "1": "l", "i": "l", "|": "l", "!": "l", "0": "o", "5": "s", "$": "s", "8": "b", "2": "z", "q": "g", "9": "g", "4": "a", "@": "a", "3": "e", "7": "t", "+": "t" };
+    // Cyrillic look-alikes folded to ASCII; everything else non-ASCII becomes a wildcard.
+    const CYR = { "а": "a", "е": "e", "о": "o", "р": "p", "с": "c", "у": "y", "х": "x", "і": "i", "ј": "j", "ѕ": "s" };
     const skeleton = (t) => Array.from(String(t).normalize("NFKC").toLowerCase())
-      .filter((c) => !/[\p{Cf}\p{M}\p{Z}]/u.test(c))
-      .map((c) => LOOKALIKE[c] ?? c)
-      .map((c) => (/[a-z0-9]/.test(c) ? c : /[\p{L}\p{N}\p{S}]/u.test(c) ? "?" : ""))
+      .filter((c) => !/[\p{Cf}\p{M}\p{Z}\p{Cc}]/u.test(c))   // invisible / separators / control: dropped (insertions collapse)
+      .map((c) => CYR[c] ?? c)
+      .map((c) => (/[a-z0-9|!@$+]/.test(c) ? (FOLD[c] ?? c) : "?"))  // any other char (letters of other scripts, punctuation, symbols, private-use) is a wildcard
       .join("");
-    const markerRes = SECRET_MARKERS.map((m) => skeleton(m).replace(/\?/g, "")).filter(Boolean)
-      .map((m) => new RegExp(Array.from(m).map((c) => `[${c}?]`).join(""), "i"));
+    // Fail closed if a marker cannot be turned into a usable ASCII skeleton.
+    const markerSk = SECRET_MARKERS.map((m) => skeleton(m).replace(/\?/g, ""));
+    const markersUsable = markerSk.length > 0 && markerSk.every((m) => m.length >= 4);
+    const hidesMarker = (sk) => markerSk.some((m) => {
+      if (sk.replace(/\?/g, "").includes(m)) return true;
+      const need = Math.ceil(m.length / 3);
+      for (let i = 0; i + m.length <= sk.length; i++) {
+        let lit = 0, ok = true;
+        for (let j = 0; j < m.length; j++) { const c = sk[i + j]; if (c === m[j]) lit++; else if (c !== "?") { ok = false; break; } }
+        if (ok && lit >= need) return true;
+      }
+      return false;
+    });
     const maskText = (t) => {
       if (t == null) return undefined;
-      if (!MARKERS_MATCH_PROMPT) return WITHHELD;
+      if (!MARKERS_MATCH_PROMPT || !markersUsable) return WITHHELD;
       let out = String(t).normalize("NFKC");
       for (const re of fuzzy) out = out.replace(re, MASK);
       const sk = skeleton(out.split(MASK).join(" "));
-      if (markerRes.some((re) => re.test(sk))) return "[reply withheld for viewers: it contains a disguised secret]";
+      if (hidesMarker(sk)) return "[reply withheld for viewers: it contains a disguised secret]";
       return out;
     };
     return res.json({

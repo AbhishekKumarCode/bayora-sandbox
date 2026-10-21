@@ -54,7 +54,7 @@ export function Landing() {
         <div className="relative mx-auto grid max-w-[1240px] items-center gap-10 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-12">
           <div className="lg:col-span-6">
             <div className="flex flex-wrap items-center gap-2"><span className="label text-muted">Adversarial AI safety testing you can audit</span></div>
-            <h1 className="display mt-6 text-[48px] sm:text-[72px]" style={{ textWrap: "balance" }}>Is your AI actually safe?<br /><span className="text-accent">Or does it just say so.</span></h1>
+            <h1 className="display mt-6 text-[48px] sm:text-[72px]" style={{ textWrap: "balance" }}>Is your AI actually safe?<br /><span className="text-accent">Or does it just say&nbsp;so.</span></h1>
             <p className="mt-7 max-w-[520px] text-[17px] font-semibold leading-relaxed text-ink-2">A red room attacks the model. A blue room judges every reply without ever seeing the attack. Each verdict is sealed into a keyed hash chain you can verify yourself. When something gets through, it stays on the record.</p>
             <div className="mt-8 flex flex-wrap gap-4">
               <Button size="lg" variant="primary" to="/app">Open the sandbox <ArrowRight size={18} strokeWidth={2.5} /></Button>
@@ -100,7 +100,7 @@ export function Landing() {
       </section>
 
       {/* Isolation */}
-      <section id="isolation" className="border-y-[3px] border-ink bg-card">
+      <section id="isolation" className="border-y border-line bg-white/40">
         <div className="mx-auto max-w-[1240px] px-4 py-24 sm:px-6">
           <div className="label text-muted">Isolation, enforced in code</div>
           <h2 className="display mt-3 text-[36px] sm:text-[52px]">Not promised. <span className="text-blue-2">Built in.</span></h2>
@@ -131,7 +131,7 @@ export function Landing() {
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-5 py-3"><span className="mono text-[12px] font-bold">{techniqueLabel(leak.technique)} · entry {leak.seal?.seq} · {leak.response?.data.model ?? "model"}</span><Stamp tone="red">got through · {Math.round((leak.verdict?.data.confidence ?? 0) * 100)}%</Stamp></div>
                 <div className="space-y-5 p-5">
                   <Row kind="attacker" who="Red room" meta={leak.technique} cls="bg-white"><span>{leak.prompt ?? "The attack text is hidden from public viewers so the judge can never obtain it. Operators see it in the dashboard."}</span></Row>
-                  <Row kind="model" who={leak.response?.data.model ?? "model"} meta="reply" cls="bg-yellow"><span className="mono">{(leak.response?.data.response ?? leak.response?.data.responsePreview ?? "").slice(0, 400)}</span></Row>
+                  <Row kind="model" who={leak.response?.data.model ?? "model"} meta="reply" cls="bg-amber/40"><span className="mono">{(leak.response?.data.response ?? leak.response?.data.responsePreview ?? "").slice(0, 400)}</span></Row>
                   <Row kind="judge" who="Blue room" meta="saw the reply only" cls="bg-blue text-white"><span>{leak.verdict?.data.notes}</span></Row>
                   <div className="flex flex-wrap items-center gap-3 border-t border-line pt-4 text-[12px]"><Actor kind="seal" size={24} /><span className="label">Sealed · entry #{leak.seal?.seq}</span><span className="mono font-bold">{leak.seal?.hash.slice(0, 10)}…</span><Link to="/app/audit" className="label ml-auto underline decoration-2 underline-offset-4">Open the chain</Link></div>
                 </div>
@@ -215,7 +215,7 @@ function ChainDemo() {
       <div className="mt-4 space-y-3">
         {rows.map((r, i) => { const n = i + 1; const broken = tampered && n >= 3; return (
           <div key={n} className={cx("flex items-center gap-3 border border-line px-3 py-2 text-[12.5px] font-bold", broken ? "bg-red text-white" : "bg-white")}>
-            <span className={cx("h-3 w-3 border border-line", broken ? "bg-ink" : "bg-green")} /><span className="mono opacity-70">#{n}</span><span>{r}</span><span className="mono ml-auto">{broken ? (n === 3 ? "data altered" : "prev mismatch") : `h${n}…${(n * 37).toString(16)}`}</span>
+            <span className={cx("h-3 w-3 rounded-full", broken ? "bg-red-2" : "bg-green-2")} /><span className="mono opacity-70">#{n}</span><span>{r}</span><span className="mono ml-auto">{broken ? (n === 3 ? "data altered" : "prev mismatch") : `h${n}…${(n * 37).toString(16)}`}</span>
           </div>); })}
       </div>
       <div className={cx("mt-4 flex items-center gap-2 border border-line px-3 py-2 text-[12.5px] font-bold", tampered ? "bg-red text-white" : "bg-green")}><ShieldCheck size={15} strokeWidth={2.5} /> {tampered ? "verify → broken at seq 3 · data was altered" : "verify → ok · 5 entries · final hash matches"}</div>

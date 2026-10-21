@@ -14,24 +14,24 @@
   --color-card: rgb(255 255 255 / 0.62);
   --color-ink: #1f2430;        /* text */
   --color-ink-2: #4b5264;
-  --color-muted: #7c8394;
-  --color-faint: #b1b7c4;
+  --color-muted: #5d6578;
+  --color-faint: #6f778a;
   --color-line: rgb(31 36 48 / 0.10);
   --color-line-strong: rgb(31 36 48 / 0.18);
 
-  --color-accent: #5b6cff;     /* one quiet brand accent */
+  --color-accent: #4a5be6;     /* one quiet brand accent */
   --color-yellow: #e9d99a;     /* retained names, muted values */
   --color-yellow-2: #b9a85c;
   --color-red: #e38b86;        /* got through */
-  --color-red-2: #b8514c;
+  --color-red-2: #a94843;
   --color-green: #8fd3b0;      /* blocked / sealed */
-  --color-green-2: #2f8a5f;
+  --color-green-2: #26704b;
   --color-blue: #9db7f0;       /* judge */
-  --color-blue-2: #3f66c4;
+  --color-blue-2: #355ab0;
   --color-violet: #c3b6f2;     /* model */
-  --color-violet-2: #7b66c9;
+  --color-violet-2: #6a55b8;
   --color-amber: #f0cf93;      /* pending / unsure */
-  --color-amber-2: #a87a1f;
+  --color-amber-2: #8f6618;
 }
 
 html { scroll-behavior: smooth; }
@@ -126,3 +126,17 @@ body {
 /* bubble landing */
 @keyframes pop { 0% { transform: scale(.6); } 60% { transform: scale(1.12); } 100% { transform: scale(1); } }
 @keyframes ring { from { transform: scale(.4); opacity: .9; } to { transform: scale(2.4); opacity: 0; } }
+
+/* modals: solid surface so the page never shows through */
+.modal-surface, .modal-surface .b-card, .modal-surface .b-card-flat {
+  background: #ffffff !important;
+  backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+  border: 1px solid var(--color-line-strong);
+  box-shadow: 0 24px 60px -20px rgb(31 36 48 / 0.45), 0 0 0 1px var(--color-line);
+}
+.modal-backdrop { background: rgb(24 28 40 / 0.55); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+
+/* small screens: underlined text links and label buttons get a comfortable hit area */
+@media (max-width: 640px) {
+  a.label, button.label, a.underline, button.underline { display: inline-flex; align-items: center; min-height: 36px; padding-block: 6px; }
+}

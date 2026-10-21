@@ -14,6 +14,7 @@ export function ConnectDialog({ onClose }: { onClose: () => void }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [probe, setProbe] = useState<Probe>({ state: "idle" });
+  useEffect(() => { const k = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); }; window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k); }, [onClose]);
 
   useEffect(() => {
     let alive = true;
@@ -40,8 +41,8 @@ export function ConnectDialog({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-ink/50" onClick={onClose} />
-      <form onSubmit={submit} className="b-card relative w-full max-w-lg p-6 rise" style={{ boxShadow: "10px 10px 0 var(--color-yellow), 10px 10px 0 3px var(--color-ink)" }}>
+      <div className="modal-backdrop absolute inset-0" onClick={onClose} />
+      <form onSubmit={submit} role="dialog" aria-modal="true" aria-label="Unlock operator controls" className="modal-surface b-card relative w-full max-w-lg rounded-[18px] p-6 rise">
         <div className="flex items-start justify-between">
           <h2 className="display text-[24px]">Unlock operator controls</h2>
           <button type="button" onClick={onClose} aria-label="Close" className="border border-line bg-card p-1"><X size={16} strokeWidth={2.5} /></button>

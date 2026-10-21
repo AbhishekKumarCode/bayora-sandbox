@@ -49,6 +49,7 @@ export function Live() {
     catch (e) { setMsg(e instanceof Error ? e.message : String(e)); } finally { setStarting(false); }
   }
   const opened = open ? attacks.find((a) => a.attackId === open) : null;
+  useEffect(() => { if (!open) return; const k = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(null); }; window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k); }, [open]);
 
   return (
     <div className="space-y-8">
@@ -92,11 +93,11 @@ export function Live() {
       </section>
 
       {opened && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setOpen(null)}>
-          <div className="absolute inset-0 bg-ink/40" />
-          <div className="relative w-full max-w-[860px] rise" onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setOpen(null)} aria-label="Close" className="absolute -top-3 -right-3 z-10 rounded-full border border-line bg-white p-1.5 shadow"><X size={16} /></button>
-            <div className="max-h-[85vh] overflow-y-auto"><AttackCard a={opened} /></div>
+        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={`${opened.technique} exchange`} onClick={() => setOpen(null)}>
+          <div className="modal-backdrop absolute inset-0" />
+          <div className="modal-surface relative flex max-h-[92vh] w-full max-w-[860px] flex-col rounded-t-[20px] sm:rounded-[20px] rise" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-line px-5 py-3"><span className="display text-[16px]">Full exchange</span><button onClick={() => setOpen(null)} aria-label="Close" autoFocus className="rounded-full border border-line bg-white p-1.5 hover:bg-canvas"><X size={16} /></button></div>
+            <div className="overflow-y-auto p-4 sm:p-5"><AttackCard a={opened} /></div>
           </div>
         </div>
       )}

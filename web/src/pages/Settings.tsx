@@ -40,7 +40,7 @@ export function Settings() {
         <div className="display mt-2 text-[20px]">{s.source === "broker" ? "Live broker" : "Not connected"}</div>
         <div className="mt-1 text-[13px] font-semibold text-ink-2">{s.source === "broker" ? "The audit token lives in this tab's session storage only." : "No broker reachable. Nothing to show."}</div>
         <div className="mt-4 flex gap-2">
-          {s.role === "operator" ? <Button onClick={s.disconnect}>Lock controls</Button> : <Button variant="primary" onClick={() => setOpen(true)}>{s.source === "broker" ? "Unlock controls" : "Connect broker"}</Button>}
+          {s.role === "operator" ? <Button onClick={s.disconnect}>Lock controls</Button> : s.source !== "broker" ? <Button variant="primary" onClick={() => setOpen(true)}>Connect broker</Button> : <span className="text-[13px] text-muted">Read-only. Unlock from the model card above.</span>}
         </div>
       </Card>
 
