@@ -279,11 +279,19 @@ app.get("/audit", requireToken(AUDIT_TOKEN, VIEWER_TOKEN), async (req, res) => {
     // punctuation between the marker's characters, so "NW - 7731 ZETA" or a
     // code-fenced split still matches. Applied to every free-text field.
     const fuzzy = SECRET_MARKERS.map((m) => new RegExp(Array.from(m.normalize("NFKC")).filter((c) => /[\p{L}\p{N}]/u.test(c)).map((c) => c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("[\\s\\p{P}\\p{S}_]*"), "giu"));
+    // Skeleton: drop format/mark/separator chars, fold common look-alikes, keep
+    // letters and digits only. If a marker survives in the skeleton of the
+    // masked text, the fuzzy pass missed it: withhold the whole reply.
+    const LOOKALIKE = { "а": "a", "е": "e", "о": "o", "р": "p", "с": "c", "у": "y", "х": "x", "і": "i", "ј": "j", "ѕ": "s", "ԁ": "d", "ɡ": "g", "ⅼ": "l", "ⅰ": "i", "ο": "o", "ν": "v", "α": "a", "τ": "t", "ε": "e", "κ": "k", "ρ": "p", "η": "n", "ѡ": "w", "ꜱ": "s", "0": "o", "1": "l", "5": "s" };
+    const skeleton = (t) => Array.from(String(t).normalize("NFKC").toLowerCase()).filter((c) => !/[\p{Cf}\p{M}\p{Z}]/u.test(c)).map((c) => LOOKALIKE[c] ?? c).filter((c) => /[\p{L}\p{N}]/u.test(c)).join("");
+    const markerSkeletons = SECRET_MARKERS.map(skeleton).filter(Boolean);
     const maskText = (t) => {
       if (t == null) return undefined;
       if (!MARKERS_MATCH_PROMPT) return WITHHELD;
       let out = String(t).normalize("NFKC");
       for (const re of fuzzy) out = out.replace(re, MASK);
+      const sk = skeleton(out.split(MASK).join(" "));
+      if (markerSkeletons.some((m) => sk.includes(m))) return "[reply withheld for viewers: it contains a disguised secret]";
       return out;
     };
     return res.json({
