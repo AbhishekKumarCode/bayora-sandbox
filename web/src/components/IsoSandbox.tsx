@@ -71,7 +71,7 @@ export function IsoSandbox({ stage = "idle", through = 0, total = 0, model, clas
         const red = i < through;
         return <Box key={i} x={3} y={20.5} z={i * 0.9} w={6} d={3} h={0.9} top={red ? "#ff4d3d" : "#2bd36a"} left={red ? "#cc3a2d" : "#1f9c4e"} right={red ? "#e2443a" : "#25b85c"} ox={ox} oy={oy} s={s} stroke={2} />;
       })}
-      <text x={P(2, 24, -2.5)[0] + 6} y={P(2, 24, -2.5)[1] + 16} textAnchor="start" fontFamily="JetBrains Mono" fontSize={9} fontWeight="700" fill="#0d0d0d">LEDGER · {total ? `${through} OF ${total} THROUGH` : "EMPTY"}</text>
+      <text x={10} y={H - 8} textAnchor="start" fontFamily="JetBrains Mono" fontSize={9} fontWeight="700" fill="#0d0d0d">LEDGER · {total ? `${through} OF ${total} THROUGH` : "EMPTY"}</text>
       {/* padlock on the hallway drawer */}
       <g transform={`translate(${P(27, 12, 2.5)[0] - 6} ${P(27, 12, 2.5)[1] - 8})`}>
         <rect x="0" y="6" width="12" height="9" fill="#ffd23f" stroke="#0d0d0d" strokeWidth="2" />
