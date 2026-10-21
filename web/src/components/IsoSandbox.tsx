@@ -54,8 +54,8 @@ export function IsoSandbox({ stage = "idle", through = 0, total = 0, model, clas
       {/* network trenches */}
       <polygon points={pts([P(0, 16, 0.2), P(20, 16, 0.2), P(20, 19, 0.2), P(0, 19, 0.2)])} fill="#ff4d3d" stroke="#0d0d0d" strokeWidth={2} />
       <polygon points={pts([P(34, 16, 0.2), P(54, 16, 0.2), P(54, 19, 0.2), P(34, 19, 0.2)])} fill="#4f8cff" stroke="#0d0d0d" strokeWidth={2} />
-      <text x={P(10, 17.5, 0.2)[0]} y={P(10, 17.5, 0.2)[1] + 3} textAnchor="middle" fontFamily="JetBrains Mono" fontSize={8} fontWeight="700" fill="#fff">RED-NET</text>
-      <text x={P(44, 17.5, 0.2)[0]} y={P(44, 17.5, 0.2)[1] + 3} textAnchor="middle" fontFamily="JetBrains Mono" fontSize={8} fontWeight="700" fill="#fff">BLUE-NET</text>
+      <text x={P(15, 17.5, 0.2)[0]} y={P(15, 17.5, 0.2)[1] + 3} textAnchor="middle" fontFamily="JetBrains Mono" fontSize={8} fontWeight="700" fill="#fff">RED-NET</text>
+      <text x={P(48, 17.5, 0.2)[0]} y={P(48, 17.5, 0.2)[1] + 3} textAnchor="middle" fontFamily="JetBrains Mono" fontSize={8} fontWeight="700" fill="#fff">BLUE-NET</text>
       {/* rooms (back to front) */}
       <Box x={2} y={2} w={12} d={12} h={9} top="#ff4d3d" left="#cc3a2d" right="#e2443a" ox={ox} oy={oy} s={s} label="RED ROOM" sub="attacks" hot={stage === "model"} />
       <Box x={40} y={2} w={12} d={12} h={9} top="#4f8cff" left="#3a69c2" right="#4478dd" ox={ox} oy={oy} s={s} label="BLUE ROOM" sub="judges blind" hot={stage === "seal"} />
@@ -71,7 +71,7 @@ export function IsoSandbox({ stage = "idle", through = 0, total = 0, model, clas
         const red = i < through;
         return <Box key={i} x={3} y={20.5} z={i * 0.9} w={6} d={3} h={0.9} top={red ? "#ff4d3d" : "#2bd36a"} left={red ? "#cc3a2d" : "#1f9c4e"} right={red ? "#e2443a" : "#25b85c"} ox={ox} oy={oy} s={s} stroke={2} />;
       })}
-      <text x={P(6, 23.5, 0)[0]} y={P(6, 23.5, 0)[1] + 18} textAnchor="start" fontFamily="JetBrains Mono" fontSize={9} fontWeight="700" fill="#0d0d0d">LEDGER · {total ? `${through} OF ${total} THROUGH` : "EMPTY"}</text>
+      <text x={P(2, 24, -2.5)[0] + 6} y={P(2, 24, -2.5)[1] + 16} textAnchor="start" fontFamily="JetBrains Mono" fontSize={9} fontWeight="700" fill="#0d0d0d">LEDGER · {total ? `${through} OF ${total} THROUGH` : "EMPTY"}</text>
       {/* padlock on the hallway drawer */}
       <g transform={`translate(${P(27, 12, 2.5)[0] - 6} ${P(27, 12, 2.5)[1] - 8})`}>
         <rect x="0" y="6" width="12" height="9" fill="#ffd23f" stroke="#0d0d0d" strokeWidth="2" />
