@@ -62,12 +62,12 @@ export function AuditTape({ className }: { className?: string }) {
 
   return (
     <div className={cx("tape relative overflow-hidden font-mono text-[12px]", className)}>
-      <div className="flex items-center justify-between border-b border-white/[.06] px-4 py-2.5 text-[11px] text-[#8b8f9a]">
+      <div className="flex items-center justify-between border-b-2 border-yellow px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider text-yellow">
         <span className="flex items-center gap-2">
-          <span className="relative h-1.5 w-1.5 rounded-full bg-attack pulse-ring text-attack" />
+          <span className="h-2.5 w-2.5 bg-red blink" />
           logs/audit.log · HMAC-SHA256 · live
         </span>
-        <span>seq {seq.current}{through > 0 && <span className="ml-3 text-[#ff8a8e]">{through} through</span>}</span>
+        <span>seq {seq.current}{through > 0 && <span className="ml-3 text-red">{through} through</span>}</span>
       </div>
       <div ref={box} className="h-[300px] overflow-hidden px-4 py-2">
         {lines.map((l) => (
@@ -76,14 +76,14 @@ export function AuditTape({ className }: { className?: string }) {
             <span className="text-[#8b8f9a]">{l.t}</span>
             <span className={cx("truncate", l.tone === "red" && l.kind === "attack" ? "text-[#ff8a8e]" : l.tone === "violet" ? "text-[#c3bbff]" : l.kind === "seal" ? "text-[#8de0b3]" : "text-[#e3e5ea]")}>{l.text}</span>
             {l.tag && (
-              <span className={cx("rounded px-1.5 py-[1px] text-[10px] font-medium tracking-wide",
-                l.tone === "green" ? "bg-[#1a9e5c]/20 text-[#8de0b3]" : l.tone === "red" ? "bg-[#e5484d]/25 text-[#ffb0b3]" : "bg-[#d98a0b]/25 text-[#ffd58f]")}>{l.tag}</span>
+              <span className={cx("px-1.5 py-[1px] text-[10px] font-bold tracking-wider",
+                l.tone === "green" ? "bg-green text-ink" : l.tone === "red" ? "bg-red text-white" : "bg-amber text-ink")}>{l.tag}</span>
             )}
           </div>
         ))}
         <div className="caret pt-2 text-[#5b606c]"> </div>
       </div>
-      <div className="pointer-events-none absolute inset-x-0 top-10 h-10 bg-gradient-to-b from-[#0f1117] to-transparent" />
+      
     </div>
   );
 }

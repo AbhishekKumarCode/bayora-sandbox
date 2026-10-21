@@ -1,61 +1,51 @@
 import { Link } from "react-router-dom";
-import { ShieldCheck } from "lucide-react";
 import type { Attack } from "@/lib/model";
 import { fmtTime, techniqueLabel, verdictLabel } from "@/lib/model";
-import { Actor, Hash, Pill, verdictTone, cx } from "./ui";
+import { Actor, Hash, Stamp, verdictTone, cx } from "./ui";
 
-/** One attack as a single readable card: what was sent, what came back, what the judge said. */
+/** One attack as a readable card: what was sent, what came back, what the judge said. */
 export function AttackCard({ a, index, animate = false }: { a: Attack; index?: number; animate?: boolean }) {
   const v = a.verdict?.data.verdict;
-  const tone = a.error ? "attack" : verdictTone(v);
+  const tone = a.error ? "red" : verdictTone(v);
+  const through = v === "passed_through";
 
   return (
-    <div className={cx("card p-5", animate && "rise", v === "passed_through" && "ring-1 ring-attack/30")}>
+    <div className={cx("b-card p-5", animate && "rise")} style={through ? { boxShadow: "6px 6px 0 var(--color-red), 6px 6px 0 3px var(--color-ink)" } : undefined}>
       <div className="flex flex-wrap items-center gap-3">
-        {index != null && <span className="mono text-[12px] text-faint">{String(index).padStart(2, "0")}</span>}
-        <span className="text-[15px] font-semibold">{techniqueLabel(a.technique)}</span>
-        <span className="text-[12.5px] text-muted">{fmtTime(a.ts)}</span>
-        <Pill tone={tone} dot className="ml-auto">{a.error ? "Model error" : verdictLabel(v)}</Pill>
+        {index != null && <span className="mono text-[12px] font-bold text-muted">{String(index).padStart(2, "0")}</span>}
+        <span className="display text-[18px]">{techniqueLabel(a.technique)}</span>
+        <span className="mono text-[12px] text-muted">{fmtTime(a.ts)}</span>
+        <span className="ml-auto">
+          {a.verdict || a.error ? <Stamp tone={tone} animate={animate}>{a.error ? "Model error" : verdictLabel(v)}</Stamp> : <span className="b-pill amber blink">judging</span>}
+        </span>
       </div>
 
-      <div className="mt-4 space-y-3">
+      <div className="mt-5 space-y-4">
         <Line kind="attacker" label="Attacker sent">
-          {a.prompt ? (
-            <span className="mono whitespace-pre-wrap text-ink">"{a.prompt}"</span>
-          ) : (
-            <span className="text-ink-2">a prompt using <span className="mono text-ink">{a.technique}</span> (prompt not recorded in this log).</span>
-          )}
-          <span className="mt-1 block text-[12px] text-muted">The judge is never shown this.{a.source === "broker" && " Fired by the broker, not the red container."}</span>
+          {a.prompt ? <span className="mono whitespace-pre-wrap text-[12.5px] leading-relaxed">"{a.prompt}"</span> : <span className="text-ink-2">a prompt using <span className="mono font-bold">{a.technique}</span> (prompt not recorded in this log).</span>}
+          <span className="label mt-1.5 block text-muted">judge never sees this{a.source === "broker" && " · fired by the broker, not the red container"}</span>
         </Line>
         <Line kind="model" label="Model replied">
-          {a.error ? (
-            <span className="mono text-attack">{a.error.data.error}</span>
-          ) : a.response ? (
-            <span className="mono whitespace-pre-wrap text-ink">"{a.response.data.response ?? a.response.data.responsePreview}{!a.response.data.response && (a.response.data.responsePreview?.length ?? 0) >= 120 ? "…" : ""}"</span>
-          ) : (
-            <span className="text-pending">waiting…</span>
-          )}
+          {a.error ? <span className="mono text-[12.5px] text-red-2">{a.error.data.error}</span>
+            : a.response ? <span className="mono whitespace-pre-wrap text-[12.5px] leading-relaxed">"{a.response.data.response ?? a.response.data.responsePreview}"</span>
+            : <span className="label text-amber-2 blink">waiting…</span>}
         </Line>
         <Line kind="judge" label="Judge decided">
           {a.verdict ? (
-            <span className="text-ink-2">
-              <span className={cx("font-semibold", v === "passed_through" ? "text-attack" : v === "blocked" ? "text-sealed" : "text-pending")}>{verdictLabel(v)}</span>
-              {" · "}{a.verdict.data.notes || "no notes"} <span className="text-muted">· {Math.round((a.verdict.data.confidence ?? 0) * 100)}% sure</span>
+            <span className="text-[13.5px]">
+              <span className={cx("display text-[15px]", through ? "text-red-2" : v === "blocked" ? "text-green-2" : "text-amber-2")}>{verdictLabel(v)}</span>
+              <span className="text-ink-2"> · {a.verdict.data.notes || "no notes"}</span> <span className="mono text-[12px] text-muted">{Math.round((a.verdict.data.confidence ?? 0) * 100)}% sure</span>
             </span>
-          ) : a.error ? (
-            <span className="text-muted">nothing to judge</span>
-          ) : (
-            <span className="text-pending">waiting for the blind verdict…</span>
-          )}
+          ) : a.error ? <span className="text-muted">nothing to judge</span> : <span className="label text-amber-2 blink">awaiting blind verdict…</span>}
         </Line>
       </div>
 
       {a.seal && (
-        <div className="mt-4 flex items-center gap-2 border-t border-line pt-3 text-[12px] text-muted">
-          <ShieldCheck size={13} className="text-sealed" />
-          <span>Sealed as entry {a.seal.seq}</span>
+        <div className="mt-5 flex flex-wrap items-center gap-3 border-t-[3px] border-ink pt-3 text-[12px]">
+          <Actor kind="seal" size={22} />
+          <span className="label">Sealed · entry {a.seal.seq}</span>
           <Hash value={a.seal.hash} />
-          <Link to={`/app/audit#seq-${a.seal.seq}`} className="ml-auto font-medium text-brand hover:underline">View in chain</Link>
+          <Link to={`/app/audit#seq-${a.seal.seq}`} className="label ml-auto underline decoration-2 underline-offset-4">View in chain</Link>
         </div>
       )}
     </div>
@@ -64,10 +54,10 @@ export function AttackCard({ a, index, animate = false }: { a: Attack; index?: n
 
 function Line({ kind, label, children }: { kind: "attacker" | "model" | "judge"; label: string; children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-[28px_118px_1fr] items-start gap-3 text-[13.5px] leading-relaxed">
-      <Actor kind={kind} size={26} />
-      <span className="pt-0.5 text-[12.5px] font-medium text-muted">{label}</span>
-      <div className="min-w-0 break-words">{children}</div>
+    <div className="grid grid-cols-[32px_120px_1fr] items-start gap-3">
+      <Actor kind={kind} size={30} />
+      <span className="label pt-2 text-muted">{label}</span>
+      <div className="min-w-0 break-words pt-1.5">{children}</div>
     </div>
   );
 }

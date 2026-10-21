@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { NavLink, Outlet, Link, useLocation } from "react-router-dom";
-import { LayoutGrid, ListChecks, Radio, Library, Link2, Settings2, Menu, X, Plug, PlugZap, Database } from "lucide-react";
+import { LayoutGrid, ListChecks, Radio, Library, Link2, Settings2, Menu, X, Plug, Database } from "lucide-react";
 import { useStore, useNow } from "@/lib/store";
 import { isLive } from "@/lib/model";
-import { Button, Glow, Pill, cx } from "./ui";
+import { Button, Pill, cx } from "./ui";
 import { getBrokerUrl } from "@/lib/api";
 import { ConnectDialog } from "./ConnectDialog";
 
@@ -22,120 +22,97 @@ export function Shell() {
   const [open, setOpen] = useState(false);
   const [connectOpen, setConnectOpen] = useState(false);
   const { pathname } = useLocation();
-  const current = NAV.find((n) => (n.end ? pathname === n.to : pathname.startsWith(n.to))) ?? (pathname.startsWith("/app/settings") ? { label: "Settings" } : undefined);
-  const pageTitle = pathname.match(/^\/app\/runs\/[^/]+/) ? "Run detail" : current?.label ?? "Dashboard";
+  const current = NAV.find((n) => (n.end ? pathname === n.to : pathname.startsWith(n.to)));
+  const pageTitle = pathname.match(/^\/app\/runs\/[^/]+/) ? "Run detail" : pathname.startsWith("/app/settings") ? "Settings" : current?.label ?? "Dashboard";
   const sinceLastPoll = s.lastPollAt ? Math.round((now - s.lastPollAt) / 1000) : null;
 
   const nav = (
-    <nav className="flex flex-col gap-0.5">
+    <nav className="flex flex-col gap-2">
       {NAV.map(({ to, label, icon: Icon, end }) => (
-        <NavLink
-          key={to}
-          to={to}
-          end={end}
-          onClick={() => setOpen(false)}
-          className={({ isActive }) =>
-            cx(
-              "group flex items-center gap-2.5 rounded-[10px] px-3 py-2 text-[13.5px] font-medium transition-colors",
-              isActive ? "bg-white text-ink shadow-[0_1px_2px_rgb(17_19_24/0.06),0_0_0_1px_rgb(17_19_24/0.05)]" : "text-ink-2 hover:bg-white/60 hover:text-ink",
-            )
-          }
-        >
-          <Icon size={16} className="text-muted group-[.active]:text-brand" />
+        <NavLink key={to} to={to} end={end} onClick={() => setOpen(false)} className={({ isActive }) => cx("b-nav text-[14px]", isActive && "active")}>
+          <Icon size={17} strokeWidth={2.5} />
           {label}
-          {label === "Live run" && live && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-attack shadow-[0_0_0_3px_rgb(229_72_77/0.2)]" />}
+          {label === "Live run" && live && <span className="ml-auto h-3 w-3 border-2 border-ink bg-red" />}
         </NavLink>
       ))}
     </nav>
   );
 
   const sourceBlock = (
-    <div className="rounded-[12px] border border-line bg-white p-3">
+    <div className="b-card-flat p-3">
       <div className="flex items-center justify-between">
-        <div className="text-[12px] font-medium text-muted">Data source</div>
-        <span className={cx("h-2 w-2 rounded-full", s.brokerOnline ? "bg-sealed" : s.brokerOnline === false ? "bg-attack" : "bg-faint")} title={s.brokerOnline ? "Broker online" : "Broker unreachable"} />
+        <div className="label text-muted">Data source</div>
+        <span className={cx("h-3 w-3 border-2 border-ink", s.brokerOnline ? "bg-green" : s.brokerOnline === false ? "bg-red" : "bg-faint")} title={s.brokerOnline ? "Broker online" : "Broker unreachable"} />
       </div>
-      <div className="mt-1.5 flex items-center gap-2">
-        {s.source === "broker" ? <PlugZap size={15} className="text-sealed" /> : <Database size={15} className="text-brand" />}
-        <div className="text-[13px] font-semibold">{s.source === "broker" ? "Live broker" : "Demo data"}</div>
-        {s.mockMode && s.source === "broker" && <Pill tone="pending" className="ml-auto">mock LLM</Pill>}
+      <div className="mt-2 flex items-center gap-2">
+        {s.source === "broker" ? <Plug size={16} strokeWidth={2.5} /> : <Database size={16} strokeWidth={2.5} />}
+        <div className="display text-[15px]">{s.source === "broker" ? "Live broker" : "Demo data"}</div>
+        {s.mockMode && s.source === "broker" && <Pill tone="amber" className="ml-auto">mock</Pill>}
       </div>
-      <div className="mt-2.5 flex gap-1.5">
-        {s.source === "broker" ? (
-          <Button size="sm" variant="secondary" className="flex-1" onClick={s.disconnect}>Disconnect</Button>
-        ) : (
-          <Button size="sm" variant="secondary" className="flex-1" onClick={() => setConnectOpen(true)}><Plug size={13} /> Connect broker</Button>
-        )}
+      <div className="mt-3">
+        {s.source === "broker"
+          ? <Button size="sm" className="w-full" onClick={s.disconnect}>Disconnect</Button>
+          : <Button size="sm" variant="primary" className="w-full" onClick={() => setConnectOpen(true)}>Connect broker</Button>}
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-canvas text-ink">
-      {/* page glows */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
-        <Glow tone="brand" size={800} className="-top-96 right-[-15%] opacity-20" />
-      </div>
-
+    <div className="min-h-screen bg-paper text-ink">
       <div className="relative flex min-h-screen">
         {/* Sidebar */}
-        <aside className="sticky top-0 hidden h-screen w-[240px] shrink-0 flex-col border-r border-line/80 bg-[#f1f2f5]/80 px-3 py-4 backdrop-blur lg:flex">
-          <Link to="/" className="mb-6 flex items-center gap-2 px-2">
+        <aside className="sticky top-0 hidden h-screen w-[248px] shrink-0 flex-col border-r-[3px] border-ink bg-paper px-4 py-5 lg:flex">
+          <Link to="/" className="mb-7 flex items-center gap-2.5 px-1">
             <Logo />
-            <span className="text-[14px] font-semibold tracking-tight">Bayora Sandbox</span>
+            <span className="display text-[17px]">Bayora Sandbox</span>
           </Link>
           {nav}
-          <div className="mt-auto space-y-2">
+          <div className="mt-auto space-y-3">
             {sourceBlock}
-            <NavLink to="/app/settings" className="flex items-center gap-2.5 rounded-[10px] px-3 py-2 text-[13.5px] font-medium text-ink-2 hover:bg-white/60">
-              <Settings2 size={16} className="text-muted" /> Settings
+            <NavLink to="/app/settings" className={({ isActive }) => cx("b-nav text-[14px]", isActive && "active")}>
+              <Settings2 size={17} strokeWidth={2.5} /> Settings
             </NavLink>
           </div>
         </aside>
 
         {/* Main */}
         <div className="flex min-w-0 flex-1 flex-col">
-          {/* Header */}
-          <header className="sticky top-0 z-30 border-b border-line/80 bg-canvas/85 backdrop-blur">
-            <div className="mx-auto flex h-14 max-w-[1200px] items-center gap-3 px-4 sm:px-6 lg:px-8">
-              <Link to="/" className="flex items-center gap-2 lg:hidden"><Logo /><span className="text-[14px] font-semibold">Bayora</span></Link>
-              <div className="hidden items-center gap-2 text-[13px] lg:flex">
-                <span className="text-muted">Sandbox</span>
-                <span className="text-faint">/</span>
-                <span className="font-medium text-ink">{pageTitle}</span>
+          <header className="sticky top-0 z-30 border-b-[3px] border-ink bg-yellow">
+            <div className="mx-auto flex h-14 max-w-[1240px] items-center gap-3 px-4 sm:px-6 lg:px-8">
+              <Link to="/" className="flex items-center gap-2 lg:hidden"><Logo /><span className="display text-[16px]">Bayora</span></Link>
+              <div className="hidden items-center gap-2 lg:flex">
+                <span className="label">Sandbox</span><span className="label opacity-50">/</span><span className="display text-[15px]">{pageTitle}</span>
               </div>
-
               <div className="ml-auto flex items-center gap-2">
-                {live && <Pill tone="attack" dot className="hidden sm:inline-flex">run in progress</Pill>}
-                <div className="hidden items-center gap-2 rounded-full border border-line bg-white py-1 pl-2.5 pr-1.5 text-[12.5px] md:flex" title={getBrokerUrl()}>
-                  <span className={cx("h-2 w-2 rounded-full", s.brokerOnline ? "bg-sealed" : s.brokerOnline === false ? "bg-attack" : "bg-faint")} />
-                  <span className="text-ink-2">
-                    {s.brokerOnline === false ? "broker unreachable" : s.source === "broker" ? `live · synced ${sinceLastPoll == null ? "…" : sinceLastPoll + "s ago"}` : s.brokerOnline ? `broker online${s.mockMode ? " · mock" : ""} · showing demo` : "checking broker"}
+                {live && <Pill tone="red" dot className="hidden sm:inline-flex">run in progress</Pill>}
+                <div className="hidden items-center gap-2 border-[3px] border-ink bg-card py-1 pl-2.5 pr-1.5 text-[12.5px] font-semibold md:flex" title={getBrokerUrl()}>
+                  <span className={cx("h-2.5 w-2.5 border-2 border-ink", s.brokerOnline ? "bg-green" : s.brokerOnline === false ? "bg-red" : "bg-faint")} />
+                  <span className="mono text-[11px] font-bold uppercase tracking-wide">
+                    {s.brokerOnline === false ? "broker unreachable" : s.source === "broker" ? `live · ${sinceLastPoll == null ? "…" : sinceLastPoll + "s"}` : s.brokerOnline ? `online${s.mockMode ? " · mock" : ""} · demo` : "checking"}
                   </span>
                   {s.source === "broker"
-                    ? <button onClick={s.disconnect} className="rounded-full bg-canvas px-2 py-0.5 text-[12px] font-medium text-ink-2 hover:bg-[#e6e7eb]">disconnect</button>
-                    : <button onClick={() => setConnectOpen(true)} className="rounded-full bg-ink px-2.5 py-0.5 text-[12px] font-medium text-white hover:bg-[#23262e]">connect</button>}
+                    ? <button onClick={s.disconnect} className="b-pill ink cursor-pointer">disconnect</button>
+                    : <button onClick={() => setConnectOpen(true)} className="b-pill ink cursor-pointer">connect</button>}
                 </div>
-                <Button size="sm" variant="secondary" to="/app/live" className="hidden sm:inline-flex"><Radio size={14} /> Live</Button>
-                <button onClick={() => setOpen(true)} aria-label="Open menu" className="rounded-[8px] p-2 hover:bg-white lg:hidden"><Menu size={18} /></button>
+                <Button size="sm" to="/app/live" className="hidden sm:inline-flex"><Radio size={14} strokeWidth={2.5} /> Live</Button>
+                <button onClick={() => setOpen(true)} aria-label="Open menu" className="border-[3px] border-ink bg-card p-1.5 lg:hidden"><Menu size={18} strokeWidth={2.5} /></button>
               </div>
             </div>
           </header>
 
-          <main className="mx-auto w-full max-w-[1200px] flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+          <main className="mx-auto w-full max-w-[1240px] flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
             <Outlet />
           </main>
         </div>
       </div>
 
-      {/* Mobile drawer */}
       {open && (
         <div className="fixed inset-0 z-40 lg:hidden">
-          <div className="absolute inset-0 bg-ink/30" onClick={() => setOpen(false)} />
-          <div className="absolute inset-y-0 left-0 flex w-[280px] flex-col bg-[#f1f2f5] px-3 py-4">
-            <div className="mb-6 flex items-center justify-between px-2">
-              <span className="flex items-center gap-2"><Logo /><span className="text-[14px] font-semibold">Bayora Sandbox</span></span>
-              <button onClick={() => setOpen(false)} aria-label="Close menu" className="rounded-[8px] p-2 hover:bg-white"><X size={18} /></button>
+          <div className="absolute inset-0 bg-ink/40" onClick={() => setOpen(false)} />
+          <div className="absolute inset-y-0 left-0 flex w-[290px] flex-col border-r-[3px] border-ink bg-paper px-4 py-5">
+            <div className="mb-6 flex items-center justify-between px-1">
+              <span className="flex items-center gap-2"><Logo /><span className="display text-[16px]">Bayora Sandbox</span></span>
+              <button onClick={() => setOpen(false)} aria-label="Close menu" className="border-[3px] border-ink bg-card p-1.5"><X size={18} strokeWidth={2.5} /></button>
             </div>
             {nav}
             <div className="mt-auto">{sourceBlock}</div>
@@ -148,11 +125,10 @@ export function Shell() {
   );
 }
 
-export function Logo({ size = 26 }: { size?: number }) {
+export function Logo({ size = 30 }: { size?: number }) {
   return (
-    <span className="relative inline-flex shrink-0 items-center justify-center" style={{ width: size, height: size }}>
-      <span className="absolute inset-0 rounded-[8px] bg-brand shadow-[0_0_18px_rgb(109_93_246/0.45)]" />
-      <svg className="relative" width={size * 0.6} height={size * 0.6} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <span className="relative inline-flex shrink-0 items-center justify-center border-[3px] border-ink bg-yellow" style={{ width: size, height: size, boxShadow: "3px 3px 0 var(--color-ink)" }}>
+      <svg width={size * 0.6} height={size * 0.6} viewBox="0 0 24 24" fill="none" stroke="#0d0d0d" strokeWidth="2.6" strokeLinecap="square" strokeLinejoin="miter">
         <path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z" /><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5" />
       </svg>
     </span>
