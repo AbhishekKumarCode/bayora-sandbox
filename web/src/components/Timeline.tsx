@@ -22,7 +22,7 @@ export function AttackCard({ a, index, animate = false }: { a: Attack; index?: n
 
       <div className="mt-5 space-y-4">
         <Line kind="attacker" label="Attacker sent">
-          {a.prompt ? <span className="mono whitespace-pre-wrap text-[12.5px] leading-relaxed">"{a.prompt}"</span> : <span className="text-ink-2">a prompt using <span className="mono font-bold">{a.technique}</span> (prompt not recorded in this log).</span>}
+          {a.prompt ? <span className="mono whitespace-pre-wrap text-[12.5px] leading-relaxed">"{a.prompt}"</span> : <span className="text-ink-2">a <span className="mono font-bold">{a.technique}</span> prompt. {a.promptRedacted ? "Text hidden from read-only viewers; unlock with the operator token to read it." : "Prompt not recorded in this log."}</span>}
           <span className="label mt-1.5 block text-muted">judge never sees this{a.source === "broker" && " · fired by the broker, not the red container"}</span>
         </Line>
         <Line kind="model" label="Model replied">

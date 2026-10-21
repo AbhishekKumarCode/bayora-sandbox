@@ -165,12 +165,14 @@ app.post("/run-done", requireToken(RED_TEAM_TOKEN), (req, res) => {
 
 // ---- Operator endpoints (AUDIT_TOKEN): see and steer the test, never the judge ----
 
-app.get("/attacks", requireToken(AUDIT_TOKEN, VIEWER_TOKEN), async (req, res) => {
+app.get("/attacks", requireToken(AUDIT_TOKEN), async (req, res) => {
   res.json({ attacks: await readAttackCatalog() });
 });
 
 app.get("/config", requireToken(AUDIT_TOKEN, VIEWER_TOKEN), (req, res) => {
-  res.json({ ...llmDetails(), mockMode: isMockMode(), systemPrompt: SYSTEM_PROMPT, runInProgress, role: req.role });
+  const d = llmDetails();
+  if (req.role === "viewer") return res.json({ provider: d.provider, model: d.model, baseUrl: null, mockMode: isMockMode(), systemPrompt: null, runInProgress, role: "viewer" });
+  res.json({ ...d, mockMode: isMockMode(), systemPrompt: SYSTEM_PROMPT, runInProgress, role: req.role });
 });
 
 app.get("/models", requireToken(AUDIT_TOKEN, VIEWER_TOKEN), async (req, res) => {
@@ -227,6 +229,11 @@ app.post("/score", requireToken(BLUE_TEAM_TOKEN), async (req, res) => {
 // the log even though it's on the same Docker network as the broker.
 app.get("/audit", requireToken(AUDIT_TOKEN, VIEWER_TOKEN), async (req, res) => {
   const entries = await readAllEntries();
+  if (req.role === "viewer") {
+    // The viewer token lives in the public web build. Strip prompts so that
+    // nothing reachable with it could hand the judge the attack text.
+    return res.json({ count: entries.length, redacted: true, entries: entries.map((e) => e.event === "attack_submitted" ? { ...e, data: { ...e.data, prompt: undefined, promptRedacted: true } } : e) });
+  }
   res.json({ count: entries.length, entries });
 });
 

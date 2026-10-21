@@ -4,6 +4,7 @@ export type Attack = {
   attackId: string;
   technique: string;
   prompt?: string;
+  promptRedacted?: boolean;
   source?: "red-team" | "broker";
   seq: number;
   ts: string;
@@ -39,7 +40,7 @@ export function groupAttacks(entries: AuditEntry[]): Attack[] {
     const id = e.data.attackId;
     if (!id) continue;
     if (e.event === "attack_submitted") {
-      const a: Attack = { attackId: id, technique: e.data.technique ?? "unknown", prompt: e.data.prompt, source: e.data.source, seq: e.seq, ts: e.ts, seal: e };
+      const a: Attack = { attackId: id, technique: e.data.technique ?? "unknown", prompt: e.data.prompt, promptRedacted: e.data.promptRedacted, source: e.data.source, seq: e.seq, ts: e.ts, seal: e };
       byId.set(id, a);
       order.push(a);
       continue;

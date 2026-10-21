@@ -109,6 +109,12 @@ exactly where the chain breaks.
 
 ## What this does NOT claim to do yet
 
+- The public dashboard build carries a read-only `VIEWER_TOKEN`. Anything that
+  token can read is treated as public: attack prompts and the system prompt
+  are stripped from viewer responses, and the catalog endpoint is operator-only,
+  so the judge container could not learn prompts even if it fetched the site.
+  Technique labels remain visible to viewers.
+
 - The HMAC key lives in the broker. A compromised broker can forge and vouch
   for its own log, and trailing entries can be truncated without detection
   until the chain head is anchored somewhere the broker cannot write.

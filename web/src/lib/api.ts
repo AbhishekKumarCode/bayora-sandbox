@@ -57,6 +57,7 @@ export type AuditEntry = {
     attackId?: string;
     technique?: string;
     prompt?: string;
+    promptRedacted?: boolean;
     source?: "red-team" | "broker";
     responsePreview?: string;
     response?: string;
