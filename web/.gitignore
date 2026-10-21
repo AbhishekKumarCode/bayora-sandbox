@@ -26,3 +26,6 @@ dist-ssr
 *.sw?
 .vercel
 .env*
+
+# public, read-only viewer config; safe to commit
+!.env.production
