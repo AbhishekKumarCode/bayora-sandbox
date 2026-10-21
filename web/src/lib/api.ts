@@ -3,7 +3,7 @@
 // RED_TEAM_TOKEN or BLUE_TEAM_TOKEN, by design.
 
 export const DEFAULT_BROKER_URL: string =
-  import.meta.env.VITE_BROKER_URL || "https://meal-argued-successful-gentle.trycloudflare.com";
+  import.meta.env.VITE_BROKER_URL || "https://white-ought-rows-less.trycloudflare.com";
 
 const URL_KEY = "bayora_broker_url";
 export function getBrokerUrl(): string {
