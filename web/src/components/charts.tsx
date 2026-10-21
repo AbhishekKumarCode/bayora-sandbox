@@ -5,10 +5,10 @@ export const VERDICT_COLOR: Record<Verdict | "pending" | "error", string> = {
   blocked: "var(--color-green)",
   passed_through: "var(--color-red)",
   ambiguous: "var(--color-amber)",
-  pending: "#d9d3c4",
+  pending: "#dfe2ea",
   error: "var(--color-red)",
 };
-const INK = "var(--color-ink)";
+const INK = "var(--color-line-strong)";
 
 /* ---------- Ring with hard black outline ---------- */
 export function VerdictRing({ blocked, passed, ambiguous, pending = 0, size = 160, stroke = 22, label, sub }: { blocked: number; passed: number; ambiguous: number; pending?: number; size?: number; stroke?: number; label?: React.ReactNode; sub?: React.ReactNode }) {
@@ -20,15 +20,14 @@ export function VerdictRing({ blocked, passed, ambiguous, pending = 0, size = 16
   return (
     <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={INK} strokeWidth={stroke + 6} />
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#fffdf7" strokeWidth={stroke} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={INK} strokeWidth={stroke + 2} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#ffffff" strokeWidth={stroke} />
         {segs.map(([n, color], i) => {
           const len = (n / total) * c;
           const el = n > 0 ? <circle key={i} cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeDasharray={`${len} ${c - len}`} strokeDashoffset={-offset} style={{ transition: "stroke-dasharray .5s, stroke-dashoffset .5s" }} /> : null;
           offset += len; return el;
         })}
-        <circle cx={size / 2} cy={size / 2} r={r - stroke / 2} fill="none" stroke={INK} strokeWidth={3} />
-        <circle cx={size / 2} cy={size / 2} r={r + stroke / 2} fill="none" stroke={INK} strokeWidth={3} />
+        
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
         <div className="display text-[30px]">{label}</div>
@@ -42,7 +41,7 @@ export function VerdictRing({ blocked, passed, ambiguous, pending = 0, size = 16
 export function VerdictStrip({ verdicts, size = 14, gap = 4, className }: { verdicts: Array<Verdict | "pending" | "error">; size?: number; gap?: number; className?: string }) {
   return (
     <div className={cx("flex flex-wrap", className)} style={{ gap }}>
-      {verdicts.map((v, i) => <span key={i} title={v} className="block border-2 border-ink" style={{ width: size, height: size, background: VERDICT_COLOR[v], boxShadow: "2px 2px 0 var(--color-ink)" }} />)}
+      {verdicts.map((v, i) => <span key={i} title={v} className="block border border-line" style={{ width: size, height: size, background: VERDICT_COLOR[v], boxShadow: "2px 2px 0 var(--color-ink)" }} />)}
     </div>
   );
 }
@@ -52,11 +51,11 @@ export function TrendArea({ points, height = 140, className, labels }: { points:
   if (points.length === 0) return <div className="text-[13px] text-muted">No data.</div>;
   return (
     <div className={cx("", className)}>
-      <div className="flex items-end gap-3 border-b-[3px] border-ink" style={{ height }}>
+      <div className="flex items-end gap-3 border-b border-line" style={{ height }}>
         {points.map((p, i) => (
           <div key={i} className="group relative flex flex-1 flex-col items-center justify-end self-stretch">
             <span className="label mb-1 text-ink">{p}%</span>
-            <div className="w-full border-[3px] border-b-0 border-ink" style={{ height: `${Math.max(4, p)}%`, background: p >= 70 ? VERDICT_COLOR.blocked : p >= 40 ? VERDICT_COLOR.ambiguous : VERDICT_COLOR.passed_through, boxShadow: "4px 0 0 var(--color-ink) inset" }} />
+            <div className="w-full rounded-t-[8px]" style={{ height: `${Math.max(4, p)}%`, background: p >= 70 ? VERDICT_COLOR.blocked : p >= 40 ? VERDICT_COLOR.ambiguous : VERDICT_COLOR.passed_through }} />
           </div>
         ))}
       </div>
@@ -68,7 +67,7 @@ export function TrendArea({ points, height = 140, className, labels }: { points:
 /* ---------- Horizontal bar ---------- */
 export function HBar({ value, max = 100, color = "var(--color-green)", height = 14, className }: { value: number; max?: number; color?: string; height?: number; className?: string }) {
   return (
-    <div className={cx("w-full border-2 border-ink bg-white", className)} style={{ height }}>
+    <div className={cx("w-full border border-line bg-white", className)} style={{ height }}>
       <div className="h-full border-r-2 border-ink" style={{ width: `${Math.min(100, (value / max) * 100)}%`, background: color, transition: "width .4s" }} />
     </div>
   );
@@ -83,7 +82,7 @@ export function Gauge({ pct, size = 64, stroke = 10 }: { pct: number; size?: num
   return (
     <div className="relative" style={{ width: size, height: size / 2 + 8 }}>
       <svg width={size} height={size / 2 + 6} viewBox={`0 0 ${size} ${size / 2 + 6}`}>
-        <path d={d} fill="none" stroke={INK} strokeWidth={stroke + 5} />
+        <path d={d} fill="none" stroke={INK} strokeWidth={stroke + 1} />
         <path d={d} fill="none" stroke="#fff" strokeWidth={stroke} />
         <path d={d} fill="none" stroke={color} strokeWidth={stroke} strokeDasharray={`${(pct / 100) * c} ${c}`} />
       </svg>
@@ -93,13 +92,13 @@ export function Gauge({ pct, size = 64, stroke = 10 }: { pct: number; size?: num
 }
 
 export function Cell({ v, title }: { v?: Verdict | "pending"; title?: string }) {
-  return <span title={title} className="block h-6 w-6 border-2 border-ink" style={{ background: v ? VERDICT_COLOR[v] : "#fff", boxShadow: v ? "2px 2px 0 var(--color-ink)" : "none" }} />;
+  return <span title={title} className="block h-6 w-6 border border-line" style={{ background: v ? VERDICT_COLOR[v] : "#fff", boxShadow: v ? "2px 2px 0 var(--color-ink)" : "none" }} />;
 }
 
 export function Legend({ items, className }: { items: Array<{ color: string; label: string; n?: number }>; className?: string }) {
   return (
     <div className={cx("flex flex-wrap gap-x-4 gap-y-1 text-[12.5px] font-semibold", className)}>
-      {items.map((it) => <span key={it.label} className="flex items-center gap-1.5"><span className="h-3 w-3 border-2 border-ink" style={{ background: it.color }} />{it.label}{it.n != null && <span className="mono text-muted">{it.n}</span>}</span>)}
+      {items.map((it) => <span key={it.label} className="flex items-center gap-1.5"><span className="h-3 w-3 border border-line" style={{ background: it.color }} />{it.label}{it.n != null && <span className="mono text-muted">{it.n}</span>}</span>)}
     </div>
   );
 }

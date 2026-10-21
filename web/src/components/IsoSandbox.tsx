@@ -11,7 +11,7 @@ const COS = Math.cos(Math.PI / 6), SIN = Math.sin(Math.PI / 6);
 const iso = (x: number, y: number, z: number, ox: number, oy: number, s: number) => [ox + (x - y) * COS * s, oy + (x + y) * SIN * s - z * s] as const;
 const pts = (list: Array<readonly [number, number]>) => list.map((p) => p.join(",")).join(" ");
 
-function Box({ x, y, z = 0, w, d, h, top, left, right, ox, oy, s, label, sub, hot, stroke = 3 }: { x: number; y: number; z?: number; w: number; d: number; h: number; top: string; left: string; right: string; ox: number; oy: number; s: number; label?: string; sub?: string; hot?: boolean; stroke?: number }) {
+function Box({ x, y, z = 0, w, d, h, top, left, right, ox, oy, s, label, sub, hot, stroke = 1.5 }: { x: number; y: number; z?: number; w: number; d: number; h: number; top: string; left: string; right: string; ox: number; oy: number; s: number; label?: string; sub?: string; hot?: boolean; stroke?: number }) {
   const P = (a: number, b: number, c: number) => iso(a, b, c, ox, oy, s);
   const T = [P(x, y, z + h), P(x + w, y, z + h), P(x + w, y + d, z + h), P(x, y + d, z + h)];
   const L = [P(x, y + d, z), P(x + w, y + d, z), P(x + w, y + d, z + h), P(x, y + d, z + h)];
@@ -20,12 +20,12 @@ function Box({ x, y, z = 0, w, d, h, top, left, right, ox, oy, s, label, sub, ho
   return (
     <g>
       {hot && <polygon points={pts(T)} fill="#ffd23f" opacity=".0" />}
-      <polygon points={pts(L)} fill={left} stroke="#0d0d0d" strokeWidth={stroke} strokeLinejoin="round" />
-      <polygon points={pts(R)} fill={right} stroke="#0d0d0d" strokeWidth={stroke} strokeLinejoin="round" />
-      <polygon points={pts(T)} fill={top} stroke="#0d0d0d" strokeWidth={stroke} strokeLinejoin="round" />
-      {hot && <polygon points={pts(T)} fill="none" stroke="#0d0d0d" strokeWidth={stroke} strokeDasharray="6 5" className="flow-line" />}
-      {label && <text x={c[0]} y={c[1] + 4} textAnchor="middle" fontFamily="Bricolage Grotesque, sans-serif" fontWeight="800" fontSize={13 * (s / 10)} fill="#0d0d0d">{label}</text>}
-      {sub && <text x={c[0]} y={c[1] + 4 + 13 * (s / 10)} textAnchor="middle" fontFamily="JetBrains Mono, monospace" fontSize={9 * (s / 10)} fill="#0d0d0d" opacity=".75">{sub}</text>}
+      <polygon points={pts(L)} fill={left} stroke="#2b3140" strokeWidth={stroke} strokeLinejoin="round" />
+      <polygon points={pts(R)} fill={right} stroke="#2b3140" strokeWidth={stroke} strokeLinejoin="round" />
+      <polygon points={pts(T)} fill={top} stroke="#2b3140" strokeWidth={stroke} strokeLinejoin="round" />
+      {hot && <polygon points={pts(T)} fill="none" stroke="#2b3140" strokeWidth={stroke} strokeDasharray="6 5" className="flow-line" />}
+      {label && <text x={c[0]} y={c[1] + 4} textAnchor="middle" fontFamily="Bricolage Grotesque, sans-serif" fontWeight="700" fontSize={13 * (s / 10)} fill="#2b3140">{label}</text>}
+      {sub && <text x={c[0]} y={c[1] + 4 + 13 * (s / 10)} textAnchor="middle" fontFamily="JetBrains Mono, monospace" fontSize={9 * (s / 10)} fill="#2b3140" opacity=".75">{sub}</text>}
     </g>
   );
 }
@@ -48,34 +48,34 @@ export function IsoSandbox({ stage = "idle", through = 0, total = 0, model, clas
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className={cx("h-auto w-full", className)} role="img" aria-label="Isometric model of the sandbox">
       {/* floor */}
-      <polygon points={pts([P(-2, -2, 0), P(56, -2, 0), P(56, 24, 0), P(-2, 24, 0)])} fill="#fffdf7" stroke="#0d0d0d" strokeWidth={3} />
-      <polygon points={pts([P(-2, 24, 0), P(56, 24, 0), P(56, 24, -2.5), P(-2, 24, -2.5)])} fill="#ffd23f" stroke="#0d0d0d" strokeWidth={3} />
-      <polygon points={pts([P(56, -2, 0), P(56, 24, 0), P(56, 24, -2.5), P(56, -2, -2.5)])} fill="#e0b320" stroke="#0d0d0d" strokeWidth={3} />
+      <polygon points={pts([P(-2, -2, 0), P(56, -2, 0), P(56, 24, 0), P(-2, 24, 0)])} fill="#ffffff" stroke="#2b3140" strokeWidth={1.5} />
+      <polygon points={pts([P(-2, 24, 0), P(56, 24, 0), P(56, 24, -2.5), P(-2, 24, -2.5)])} fill="#e6e9f2" stroke="#2b3140" strokeWidth={1.5} />
+      <polygon points={pts([P(56, -2, 0), P(56, 24, 0), P(56, 24, -2.5), P(56, -2, -2.5)])} fill="#d3d7e3" stroke="#2b3140" strokeWidth={1.5} />
       {/* network trenches */}
-      <polygon points={pts([P(0, 16, 0.2), P(20, 16, 0.2), P(20, 19, 0.2), P(0, 19, 0.2)])} fill="#ff4d3d" stroke="#0d0d0d" strokeWidth={2} />
-      <polygon points={pts([P(34, 16, 0.2), P(54, 16, 0.2), P(54, 19, 0.2), P(34, 19, 0.2)])} fill="#4f8cff" stroke="#0d0d0d" strokeWidth={2} />
-      <text x={P(15, 17.5, 0.2)[0]} y={P(15, 17.5, 0.2)[1] + 3} textAnchor="middle" fontFamily="JetBrains Mono" fontSize={8} fontWeight="700" fill="#fff">RED-NET</text>
-      <text x={P(48, 17.5, 0.2)[0]} y={P(48, 17.5, 0.2)[1] + 3} textAnchor="middle" fontFamily="JetBrains Mono" fontSize={8} fontWeight="700" fill="#fff">BLUE-NET</text>
+      <polygon points={pts([P(0, 16, 0.2), P(20, 16, 0.2), P(20, 19, 0.2), P(0, 19, 0.2)])} fill="#f0a8a3" stroke="#2b3140" strokeWidth={1.2} />
+      <polygon points={pts([P(34, 16, 0.2), P(54, 16, 0.2), P(54, 19, 0.2), P(34, 19, 0.2)])} fill="#b3c6f4" stroke="#2b3140" strokeWidth={1.2} />
+      <text x={P(15, 17.5, 0.2)[0]} y={P(15, 17.5, 0.2)[1] + 3} textAnchor="middle" fontFamily="JetBrains Mono" fontSize={8} fontWeight="600" fill="#2b3140">RED-NET</text>
+      <text x={P(48, 17.5, 0.2)[0]} y={P(48, 17.5, 0.2)[1] + 3} textAnchor="middle" fontFamily="JetBrains Mono" fontSize={8} fontWeight="600" fill="#2b3140">BLUE-NET</text>
       {/* rooms (back to front) */}
-      <Box x={2} y={2} w={12} d={12} h={9} top="#ff4d3d" left="#cc3a2d" right="#e2443a" ox={ox} oy={oy} s={s} label="RED ROOM" sub="attacks" hot={stage === "model"} />
-      <Box x={40} y={2} w={12} d={12} h={9} top="#4f8cff" left="#3a69c2" right="#4478dd" ox={ox} oy={oy} s={s} label="BLUE ROOM" sub="judges blind" hot={stage === "seal"} />
+      <Box x={2} y={2} w={12} d={12} h={9} top="#f0a8a3" left="#cf7f79" right="#e0948f" ox={ox} oy={oy} s={s} label="RED ROOM" sub="attacks" hot={stage === "model"} />
+      <Box x={40} y={2} w={12} d={12} h={9} top="#b3c6f4" left="#8aa3dc" right="#9fb5e9" ox={ox} oy={oy} s={s} label="BLUE ROOM" sub="judges blind" hot={stage === "seal"} />
       {/* tubes */}
-      <polyline points={pts(t1)} fill="none" stroke="#0d0d0d" strokeWidth={7} strokeLinejoin="round" />
-      <polyline points={pts(t1)} fill="none" stroke={live && stage === "model" ? "#ffd23f" : "#fffdf7"} strokeWidth={3} strokeLinejoin="round" className={cx(stage === "model" && "flow-line")} />
-      <polyline points={pts(t2)} fill="none" stroke="#0d0d0d" strokeWidth={7} strokeLinejoin="round" />
-      <polyline points={pts(t2)} fill="none" stroke={live && stage === "judge" ? "#ffd23f" : "#fffdf7"} strokeWidth={3} strokeLinejoin="round" className={cx(stage === "judge" && "flow-line")} />
+      <polyline points={pts(t1)} fill="none" stroke="#2b3140" strokeWidth={4} strokeLinejoin="round" />
+      <polyline points={pts(t1)} fill="none" stroke={live && stage === "model" ? "#5b6cff" : "#ffffff"} strokeWidth={2} strokeLinejoin="round" className={cx(stage === "model" && "flow-line")} />
+      <polyline points={pts(t2)} fill="none" stroke="#2b3140" strokeWidth={4} strokeLinejoin="round" />
+      <polyline points={pts(t2)} fill="none" stroke={live && stage === "judge" ? "#5b6cff" : "#ffffff"} strokeWidth={2} strokeLinejoin="round" className={cx(stage === "judge" && "flow-line")} />
       {/* hallway / broker */}
-      <Box x={20} y={4} w={14} d={8} h={5} top="#a78bfa" left="#7c5ed6" right="#8f72e8" ox={ox} oy={oy} s={s} label="HALLWAY" sub={model ? model.slice(0, 18) : "broker"} hot={stage === "judge"} />
+      <Box x={20} y={4} w={14} d={8} h={5} top="#d2c8f5" left="#ab9de0" right="#bfb2ea" ox={ox} oy={oy} s={s} label="HALLWAY" sub={model ? model.slice(0, 18) : "broker"} hot={stage === "judge"} />
       {/* ledger stack in front */}
       {Array.from({ length: Math.min(8, Math.max(3, seq)) }, (_, i) => {
         const red = i < through;
-        return <Box key={i} x={3} y={20.5} z={i * 0.9} w={6} d={3} h={0.9} top={red ? "#ff4d3d" : "#2bd36a"} left={red ? "#cc3a2d" : "#1f9c4e"} right={red ? "#e2443a" : "#25b85c"} ox={ox} oy={oy} s={s} stroke={2} />;
+        return <Box key={i} x={3} y={20.5} z={i * 0.9} w={6} d={3} h={0.9} top={red ? "#f0a8a3" : "#a9e0c3"} left={red ? "#cf7f79" : "#79bb98"} right={red ? "#e0948f" : "#8fcdab"} ox={ox} oy={oy} s={s} stroke={1.2} />;
       })}
-      <text x={10} y={H - 8} textAnchor="start" fontFamily="JetBrains Mono" fontSize={9} fontWeight="700" fill="#0d0d0d">LEDGER · {total ? `${through} OF ${total} THROUGH` : "EMPTY"}</text>
+      <text x={10} y={H - 8} textAnchor="start" fontFamily="JetBrains Mono" fontSize={9} fontWeight="700" fill="#2b3140">LEDGER · {total ? `${through} OF ${total} THROUGH` : "EMPTY"}</text>
       {/* padlock on the hallway drawer */}
       <g transform={`translate(${P(27, 12, 2.5)[0] - 6} ${P(27, 12, 2.5)[1] - 8})`}>
-        <rect x="0" y="6" width="12" height="9" fill="#ffd23f" stroke="#0d0d0d" strokeWidth="2" />
-        <path d="M3 6V4a3 3 0 0 1 6 0v2" fill="none" stroke="#0d0d0d" strokeWidth="2" />
+        <rect x="0" y="6" width="12" height="9" fill="#e9d99a" stroke="#2b3140" strokeWidth="1.5" />
+        <path d="M3 6V4a3 3 0 0 1 6 0v2" fill="none" stroke="#2b3140" strokeWidth="1.5" />
       </g>
     </svg>
   );

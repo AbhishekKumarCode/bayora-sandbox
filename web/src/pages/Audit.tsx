@@ -28,8 +28,8 @@ export function Audit() {
     if (!hash) return;
     const el = document.querySelector(hash);
     el?.scrollIntoView({ block: "center" });
-    el?.classList.add("bg-yellow");
-    const id = setTimeout(() => el?.classList.remove("bg-yellow"), 2000);
+    el?.classList.add("bg-white/80");
+    const id = setTimeout(() => el?.classList.remove("bg-white/80"), 2000);
     return () => clearTimeout(id);
   }, [hash, s.entries.length]);
 
@@ -43,8 +43,8 @@ export function Audit() {
     requestAnimationFrame(() => {
       const el = document.getElementById(`seq-${seq}`);
       el?.scrollIntoView({ block: "center", behavior: "smooth" });
-      el?.classList.add("bg-yellow");
-      setTimeout(() => el?.classList.remove("bg-yellow"), 1600);
+      el?.classList.add("bg-white/80");
+      setTimeout(() => el?.classList.remove("bg-white/80"), 1600);
     });
   }
 
@@ -57,13 +57,13 @@ export function Audit() {
 
       {/* Chain visual + minimap */}
       <Card className="overflow-hidden p-0">
-        <div className="border-b-[3px] border-ink p-5">
+        <div className="border-b border-line p-5">
           <Heading title="The chain, end to end" desc={`${s.entries.length} entries. Each block is one event; the link is its hash of the one before. Click a block to jump to it.`} right={<Legend items={[{ color: "var(--color-red)", label: "Attack" }, { color: "var(--color-violet)", label: "Reply" }, { color: "var(--color-blue)", label: "Verdict" }]} />} />
           <ChainVisual entries={s.entries} brokenAt={brokenAt} onJump={jump} />
         </div>
         <div className="grid gap-5 p-5 lg:grid-cols-2">
           <div className="flex items-start gap-4">
-            <div className={cx("flex h-12 w-12 shrink-0 items-center justify-center border-[3px] border-ink", brokenAt != null ? "bg-red text-white" : "bg-green")}>
+            <div className={cx("flex h-12 w-12 shrink-0 items-center justify-center border border-line", brokenAt != null ? "bg-red text-white" : "bg-green")}>
               {brokenAt != null ? <ShieldAlert size={22} /> : <ShieldCheck size={22} />}
             </div>
             <div>
@@ -81,8 +81,8 @@ export function Audit() {
               </div>
             </div>
           </div>
-          <div className="flex items-start gap-4 border-[3px] border-dashed border-ink p-4">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center border-[3px] border-ink bg-amber"><FlaskConical size={18} strokeWidth={2.5} /></div>
+          <div className="flex items-start gap-4 border border-dashed border-line-strong p-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center border border-line bg-amber"><FlaskConical size={18} strokeWidth={2.5} /></div>
             <div className="min-w-0">
               <div className="display text-[16px]">Try to tamper</div>
               <div className="mt-1 text-[12.5px] font-semibold text-ink-2">Pick an entry and pretend it was edited. The broker shows where verification would fail. The real record is untouched.</div>
@@ -97,9 +97,9 @@ export function Audit() {
 
       {/* Filter */}
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap border-[3px] border-ink bg-card">
+        <div className="flex flex-wrap border border-line bg-card">
           {([["all", "All"], ["attack_submitted", "Attacks"], ["llm_response_received", "Replies"], ["blue_team_verdict", "Verdicts"], ["llm_error", "Errors"]] as const).map(([k, l], i) => (
-            <button key={k} onClick={() => setFilter(k)} className={cx("label px-3 py-2", i > 0 && "border-l-[3px] border-ink", filter === k && "bg-yellow")}>{l}</button>
+            <button key={k} onClick={() => setFilter(k)} className={cx("label px-3 py-2", i > 0 && "border-l border-line", filter === k && "bg-white/80")}>{l}</button>
           ))}
         </div>
         <div className="label text-muted">{entries.length} of {s.entries.length} entries · newest first</div>
@@ -114,9 +114,9 @@ export function Audit() {
             const broken = brokenAt != null && e.seq >= brokenAt;
             const isBreak = brokenAt === e.seq;
             return (
-              <div id={`seq-${e.seq}`} key={e.seq} className={cx("b-card relative flex items-start gap-4 p-4", isBreak && "bg-red text-white")} style={broken ? { boxShadow: "6px 6px 0 var(--color-red), 6px 6px 0 3px var(--color-ink)" } : undefined}>
+              <div id={`seq-${e.seq}`} key={e.seq} className={cx("b-card relative flex items-start gap-4 p-4", isBreak && "bg-red text-white")} style={broken ? { boxShadow: "0 0 0 1.5px var(--color-red-2)" } : undefined}>
                 <div className="relative z-10 flex w-[22px] shrink-0 justify-center pt-1">
-                  <span className={cx("h-4 w-4 border-[3px] border-ink", broken ? "bg-red" : "bg-green")} />
+                  <span className={cx("h-4 w-4 border border-line", broken ? "bg-red" : "bg-green")} />
                 </div>
                 <Actor kind={meta.actor} size={32} />
                 <div className="min-w-0 flex-1">
@@ -160,8 +160,8 @@ function ChainVisual({ entries, brokenAt, onJump }: { entries: AuditEntry[]; bro
           const color = broken ? "var(--color-red)" : EVENT[e.event].color;
           return (
             <div key={e.seq} className="flex items-center">
-              {i > 0 && <span className="h-[3px] w-3" style={{ background: broken ? "var(--color-red)" : "var(--color-ink)" }} />}
-              <button onClick={() => onJump(e.seq)} title={`#${e.seq} ${EVENT[e.event].label}`} className={cx("relative h-8 w-5 border-2 border-ink transition-transform hover:-translate-y-1", isBreak && "outline outline-[3px] outline-red")} style={{ background: color, boxShadow: "2px 2px 0 var(--color-ink)", opacity: broken && !isBreak ? 0.6 : 1 }}>
+              {i > 0 && <span className="h-[2px] w-3" style={{ background: broken ? "var(--color-red-2)" : "var(--color-line-strong)" }} />}
+              <button onClick={() => onJump(e.seq)} title={`#${e.seq} ${EVENT[e.event].label}`} className={cx("relative h-8 w-5 rounded-[4px] transition-transform hover:-translate-y-1", isBreak && "outline outline-2 outline-red-2")} style={{ background: color, opacity: broken && !isBreak ? 0.6 : 1 }}>
                 {e.event === "blue_team_verdict" && e.data.verdict === "passed_through" && !broken && <span className="absolute -top-2 left-1/2 h-2 w-2 -translate-x-1/2 border border-ink bg-red" title="got through" />}
               </button>
             </div>

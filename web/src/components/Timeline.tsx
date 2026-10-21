@@ -10,7 +10,7 @@ export function AttackCard({ a, index, animate = false }: { a: Attack; index?: n
   const through = v === "passed_through";
 
   return (
-    <div className={cx("b-card p-5", animate && "rise")} style={through ? { boxShadow: "6px 6px 0 var(--color-red), 6px 6px 0 3px var(--color-ink)" } : undefined}>
+    <div className={cx("b-card p-5", animate && "rise")} style={through ? { boxShadow: "0 0 0 1.5px var(--color-red-2), 0 8px 30px -14px rgb(184 81 76 / .35)" } : undefined}>
       <div className="flex flex-wrap items-center gap-3">
         {index != null && <span className="mono text-[12px] font-bold text-muted">{String(index).padStart(2, "0")}</span>}
         <span className="display text-[18px]">{techniqueLabel(a.technique)}</span>
@@ -41,7 +41,7 @@ export function AttackCard({ a, index, animate = false }: { a: Attack; index?: n
       </div>
 
       {a.seal && (
-        <div className="mt-5 flex flex-wrap items-center gap-3 border-t-[3px] border-ink pt-3 text-[12px]">
+        <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-line pt-3 text-[12px]">
           <Actor kind="seal" size={22} />
           <span className="label">Sealed · entry {a.seal.seq}</span>
           <Hash value={a.seal.hash} />

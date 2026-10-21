@@ -5,12 +5,28 @@
 export const DEFAULT_BROKER_URL: string =
   import.meta.env.VITE_BROKER_URL || "https://white-ought-rows-less.trycloudflare.com";
 
+// Read-only viewer token baked into the build so visitors see live data
+// without any login. It can read the chain, verify it and see config; it
+// cannot start runs or change the model (the broker enforces that).
+export const VIEWER_TOKEN: string = import.meta.env.VITE_VIEWER_TOKEN || "";
+
 const URL_KEY = "bayora_broker_url";
 export function getBrokerUrl(): string {
   try { return (localStorage.getItem(URL_KEY) || DEFAULT_BROKER_URL).replace(/\/+$/, ""); } catch { return DEFAULT_BROKER_URL; }
 }
+export function hasCustomBrokerUrl(): boolean {
+  try { return Boolean(localStorage.getItem(URL_KEY)); } catch { return false; }
+}
 export function setBrokerUrl(url: string) {
   try { if (!url || url === DEFAULT_BROKER_URL) localStorage.removeItem(URL_KEY); else localStorage.setItem(URL_KEY, url.trim().replace(/\/+$/, "")); } catch { /* ignore */ }
+}
+/** If a remembered custom URL is dead but the build default answers, drop the stale one. */
+export async function healStaleBrokerUrl(): Promise<boolean> {
+  if (!hasCustomBrokerUrl()) return false;
+  const ping = async (u: string) => { try { const r = await fetch(`${u}/health`, { signal: AbortSignal.timeout(6000) }); return r.ok; } catch { return false; } };
+  if (await ping(getBrokerUrl())) return false;
+  if (await ping(DEFAULT_BROKER_URL)) { setBrokerUrl(""); return true; }
+  return false;
 }
 
 const TOKEN_KEY = "bayora_audit_token";
@@ -26,7 +42,8 @@ export function clearToken() {
 }
 
 function authHeaders(): HeadersInit {
-  return { authorization: `Bearer ${getStoredToken()}` };
+  // operator token if the user unlocked, else the public viewer token
+  return { authorization: `Bearer ${getStoredToken() || VIEWER_TOKEN}` };
 }
 
 export type AuditEvent = "attack_submitted" | "llm_response_received" | "blue_team_verdict" | "llm_error";
@@ -61,7 +78,7 @@ async function safeFetch(input: string, init?: RequestInit): Promise<Response> {
   catch { throw new Error(`Could not reach ${getBrokerUrl()}. Is the broker running and the tunnel up? A browser ad-blocker can also block trycloudflare.com.`); }
 }
 
-export async function getHealth(): Promise<{ ok: boolean; mockMode: boolean; provider?: string }> {
+export async function getHealth(): Promise<{ ok: boolean; mockMode: boolean; provider?: string; viewer?: boolean }> {
   const res = await safeFetch(`${getBrokerUrl()}/health`);
   if (!res.ok) throw new Error(`health ${res.status}`);
   return res.json();
@@ -94,7 +111,7 @@ export async function triggerRun(): Promise<{ status: string }> {
   return json;
 }
 
-export type BrokerConfig = { provider: string; model: string; baseUrl: string | null; mockMode: boolean; systemPrompt: string; runInProgress: boolean };
+export type BrokerConfig = { provider: string; model: string; baseUrl: string | null; mockMode: boolean; systemPrompt: string; runInProgress: boolean; role?: "operator" | "viewer" };
 export type CatalogAttack = { technique: string; prompt: string };
 
 async function auditGet<T>(path: string): Promise<T> {

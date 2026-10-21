@@ -15,11 +15,11 @@ export function Settings() {
         <p className="mt-2 text-[14.5px] font-semibold text-ink-2">Connection, the model under test, and the data source.</p>
       </div>
 
-      {s.source === "broker" ? <ModelCard /> : (
+      {s.source === "broker" && s.role === "operator" ? <ModelCard /> : (
         <Tile tone="violet" className="p-5">
           <div className="label text-muted">Model under test</div>
-          <p className="mt-2 text-[13.5px] text-ink-2">Connect a broker to see which model is being attacked and switch it from here.</p>
-          <Button variant="primary" className="mt-4" onClick={() => setOpen(true)}>Connect broker</Button>
+          <p className="mt-2 text-[13.5px] text-ink-2">{s.source === "broker" ? `Currently under test: ${s.modelName ?? "mock"}. Unlock with the operator token to switch it.` : "Connect a broker to see which model is being attacked and switch it from here."}</p>
+          <Button variant="primary" className="mt-4" onClick={() => setOpen(true)}>{s.source === "broker" ? "Unlock controls" : "Connect broker"}</Button>
         </Tile>
       )}
 
@@ -119,10 +119,10 @@ function ModelCard() {
               <p className="mt-2 text-[12.5px] font-semibold text-ink-2">Takes effect on the next run. Each reply in the log records which model answered, so runs against different models stay comparable.</p>
             </div>
           )}
-          {msg && <div className={cx("mt-3 border-[3px] border-ink px-3 py-2 text-[12.5px] font-semibold rise", msg.ok ? "bg-green" : "bg-red text-white")}>{msg.text}</div>}
-          <div className="mt-4 border-t-[3px] border-ink pt-3">
+          {msg && <div className={cx("mt-3 border border-line px-3 py-2 text-[12.5px] font-semibold rise", msg.ok ? "bg-green" : "bg-red text-white")}>{msg.text}</div>}
+          <div className="mt-4 border-t border-line pt-3">
             <button onClick={() => setShowPrompt((v) => !v)} className="label underline decoration-2 underline-offset-4">{showPrompt ? "Hide" : "Show"} the system prompt the model runs with</button>
-            {showPrompt && <pre className="mono mt-2 whitespace-pre-wrap border-[3px] border-ink bg-white p-3 text-[12px] leading-relaxed">{cfg.systemPrompt}</pre>}
+            {showPrompt && <pre className="mono mt-2 whitespace-pre-wrap border border-line bg-white p-3 text-[12px] leading-relaxed">{cfg.systemPrompt}</pre>}
             <p className="mt-2 text-[12.5px] font-semibold text-ink-2">It contains a fake secret on purpose, so a prompt-leak attack has something real to leak. The judge never sees it either.</p>
           </div>
         </>

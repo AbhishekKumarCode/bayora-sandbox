@@ -21,7 +21,7 @@ export function ConnectDialog({ onClose }: { onClose: () => void }) {
     if (!/^https?:\/\//.test(clean)) { setProbe({ state: "fail", msg: "URL must start with http:// or https://" }); return; }
     setProbe({ state: "checking" });
     const id = setTimeout(async () => {
-      setBrokerUrl(clean);
+      if (clean !== getBrokerUrl()) setBrokerUrl(clean); // only persist a change the user made
       try { const h = await getHealth(); if (alive) setProbe({ state: "ok", mock: h.mockMode }); }
       catch (e) { if (alive) setProbe({ state: "fail", msg: e instanceof Error ? e.message : String(e) }); }
     }, 350);
@@ -43,10 +43,10 @@ export function ConnectDialog({ onClose }: { onClose: () => void }) {
       <div className="absolute inset-0 bg-ink/50" onClick={onClose} />
       <form onSubmit={submit} className="b-card relative w-full max-w-lg p-6 rise" style={{ boxShadow: "10px 10px 0 var(--color-yellow), 10px 10px 0 3px var(--color-ink)" }}>
         <div className="flex items-start justify-between">
-          <h2 className="display text-[26px]">Connect your broker</h2>
-          <button type="button" onClick={onClose} aria-label="Close" className="border-[3px] border-ink bg-card p-1"><X size={16} strokeWidth={2.5} /></button>
+          <h2 className="display text-[24px]">Unlock operator controls</h2>
+          <button type="button" onClick={onClose} aria-label="Close" className="border border-line bg-card p-1"><X size={16} strokeWidth={2.5} /></button>
         </div>
-        <p className="mt-2 text-[13.5px] text-ink-2">Two checks: the page must reach the broker, then the broker must accept your audit token.</p>
+        <p className="mt-2 text-[13.5px] text-ink-2">Visitors already see live data. The audit token adds the ability to start runs and switch the model under test.</p>
 
         <Step n={1} title="Broker address" status={probe.state === "ok" ? "ok" : probe.state === "fail" ? "fail" : "checking"}>
           <input id="broker-url" value={url} onChange={(e) => setUrl(e.target.value)} spellCheck={false} className="b-input text-[12.5px]" />
@@ -69,12 +69,12 @@ export function ConnectDialog({ onClose }: { onClose: () => void }) {
             The <code className="mono font-bold">AUDIT_TOKEN</code> line in the broker's <code className="mono font-bold">.env</code>, a long hex string. Not the red or blue token. It stays in this tab only.
             {token && !tokenLooksOk && <span className="font-semibold text-amber-2"> This doesn't look like a hex token; check for spaces or quotes.</span>}
           </div>
-          {err && <div className="mt-3 border-[3px] border-ink bg-red px-3 py-2 text-[12.5px] font-semibold text-white">{err}</div>}
+          {err && <div className="mt-3 border border-line bg-red px-3 py-2 text-[12.5px] font-semibold text-white">{err}</div>}
         </Step>
 
         <div className="mt-6 flex justify-end gap-3">
           <Button type="button" onClick={onClose}>Cancel</Button>
-          <Button type="submit" variant="primary" disabled={busy || !token.trim() || probe.state !== "ok"}>{busy ? "Connecting…" : "Connect"}</Button>
+          <Button type="submit" variant="primary" disabled={busy || !token.trim() || probe.state !== "ok"}>{busy ? "Unlocking…" : "Unlock"}</Button>
         </div>
       </form>
     </div>
@@ -85,7 +85,7 @@ function Step({ n, title, status, children }: { n: number; title: string; status
   return (
     <div className="mt-5">
       <div className="mb-2 flex items-center gap-2">
-        <span className={cx("flex h-6 w-6 items-center justify-center border-2 border-ink text-[11px] font-bold", status === "ok" ? "bg-green" : status === "fail" ? "bg-red text-white" : "bg-card")}>
+        <span className={cx("flex h-6 w-6 items-center justify-center border border-line text-[11px] font-bold", status === "ok" ? "bg-green" : status === "fail" ? "bg-red text-white" : "bg-card")}>
           {status === "ok" ? <CheckCircle2 size={14} /> : status === "fail" ? <XCircle size={14} /> : status === "checking" ? <Loader2 size={13} className="animate-spin" /> : n}
         </span>
         <span className="display text-[15px]">{title}</span>

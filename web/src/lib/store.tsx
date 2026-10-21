@@ -1,11 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ForbiddenError, clearToken, getAudit, getConfig, getHealth, getStoredToken, storeToken, triggerRun as apiTriggerRun, verifyChain as apiVerify, type AuditEntry, type VerifyResult } from "./api";
+import { ForbiddenError, VIEWER_TOKEN, clearToken, getAudit, getConfig, getHealth, getStoredToken, healStaleBrokerUrl, storeToken, triggerRun as apiTriggerRun, verifyChain as apiVerify, type AuditEntry, type VerifyResult } from "./api";
 import { demoEntries } from "./demo";
 
 export type Source = "demo" | "broker";
 
+export type Role = "operator" | "viewer";
 type Store = {
   source: Source;
+  role: Role;                  // operator = audit token entered; viewer = baked read-only token
   connected: boolean;          // broker + token working
   brokerOnline: boolean | null; // health probe
   mockMode: boolean;
@@ -27,7 +29,8 @@ const Ctx = createContext<Store | null>(null);
 const POLL_MS = 2000;
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const [source, setSource] = useState<Source>(() => (getStoredToken() ? "broker" : "demo"));
+  const [source, setSource] = useState<Source>(() => (getStoredToken() || VIEWER_TOKEN ? "broker" : "demo"));
+  const [role, setRole] = useState<Role>(() => (getStoredToken() ? "operator" : "viewer"));
   const [entries, setEntries] = useState<AuditEntry[]>(() => demoEntries());
   const [brokerOnline, setBrokerOnline] = useState<boolean | null>(null);
   const [mockMode, setMockMode] = useState(false);
@@ -40,7 +43,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let alive = true;
-    getHealth().then((h) => { if (alive) { setBrokerOnline(h.ok); setMockMode(h.mockMode); } }).catch(() => alive && setBrokerOnline(false));
+    healStaleBrokerUrl().finally(() => {
+      getHealth().then((h) => { if (alive) { setBrokerOnline(h.ok); setMockMode(h.mockMode); } }).catch(() => alive && setBrokerOnline(false));
+    });
     const id = setInterval(() => {
       getHealth().then((h) => { if (alive) { setBrokerOnline(h.ok); setMockMode(h.mockMode); } }).catch(() => alive && setBrokerOnline(false));
     }, 15000);
@@ -60,11 +65,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setLastPollAt(Date.now());
     } catch (e) {
       if (e instanceof ForbiddenError) {
-        clearToken();
-        setConnected(false);
-        setSource("demo");
-        setEntries(demoEntries());
-        setError("The audit token was rejected. Switched back to demo data.");
+        if (getStoredToken()) {
+          clearToken();
+          setRole("viewer");
+          setError(VIEWER_TOKEN ? "The operator token was rejected. Back to read-only viewing." : "The audit token was rejected. Switched back to demo data.");
+          if (!VIEWER_TOKEN) { setConnected(false); setSource("demo"); setEntries(demoEntries()); }
+        } else {
+          setConnected(false);
+          setSource("demo");
+          setEntries(demoEntries());
+          setError("The broker rejected the viewer token. Showing demo data.");
+        }
       } else {
         setError(e instanceof Error ? e.message : String(e));
       }
@@ -86,7 +97,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     try { const h = await getHealth(); setBrokerOnline(h.ok); setMockMode(h.mockMode); }
     catch { setBrokerOnline(false); }
     // model name is operator-only, so it needs the audit token
-    if (getStoredToken()) {
+    if (getStoredToken() || VIEWER_TOKEN) {
       try { const c = await getConfig(); setModelName(c.mockMode ? null : c.model); } catch { /* keep last */ }
     } else {
       setModelName(null);
@@ -102,6 +113,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setConnected(true);
       setError(null);
       setSource("broker");
+      setRole("operator");
       setLastPollAt(Date.now());
       recheckHealth();
       return null;
@@ -115,12 +127,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }, [recheckHealth]);
 
+  // "Disconnect" = drop operator rights. With a viewer token we keep reading live data.
   const disconnect = useCallback(() => {
     clearToken();
-    setConnected(false);
-    setSource("demo");
-    setEntries(demoEntries());
+    setRole("viewer");
     setError(null);
+    if (!VIEWER_TOKEN) { setConnected(false); setSource("demo"); setEntries(demoEntries()); }
   }, []);
 
   const useDemo = useCallback(() => {
@@ -139,14 +151,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const triggerRun = useCallback(async () => {
     if (source !== "broker") throw new Error("Connect to a broker to start a real run. Demo data is read-only.");
+    if (role !== "operator") throw new Error("Starting a run needs the operator token. Visitors can watch, verify and read everything.");
     const r = await apiTriggerRun();
     return r.status;
-  }, [source]);
+  }, [source, role]);
 
   const value = useMemo<Store>(() => ({
-    source, connected, brokerOnline, mockMode, modelName, entries, loading, error, lastPollAt,
+    source, role, connected, brokerOnline, mockMode, modelName, entries, loading, error, lastPollAt,
     connect, disconnect, useDemo, verify, triggerRun, recheckHealth,
-  }), [source, connected, brokerOnline, mockMode, modelName, entries, loading, error, lastPollAt, connect, disconnect, useDemo, verify, triggerRun, recheckHealth]);
+  }), [source, role, connected, brokerOnline, mockMode, modelName, entries, loading, error, lastPollAt, connect, disconnect, useDemo, verify, triggerRun, recheckHealth]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

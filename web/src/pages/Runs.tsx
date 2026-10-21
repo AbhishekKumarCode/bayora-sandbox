@@ -46,7 +46,7 @@ export function Runs() {
                     </div>
                     <VerdictStrip className="mt-4" size={13} gap={4} verdicts={r.attacks.map((a) => a.error ? "error" : (a.verdict?.data.verdict ?? "pending"))} />
                     <div className="mt-3 min-h-[18px] text-[12.5px] font-semibold">{worst.length ? <><span className="text-red-2">Weak to:</span> {worst.join(", ")}</> : <span className="text-green-2">Every attack was blocked.</span>}</div>
-                    <div className="mt-4 flex items-center justify-between border-t-[3px] border-ink pt-3"><span className="label text-muted">seal <Hash value={r.attacks[r.attacks.length - 1].seal?.hash ?? ""} /></span><span className="label flex items-center gap-1">Open <ArrowRight size={12} /></span></div>
+                    <div className="mt-4 flex items-center justify-between border-t border-line pt-3"><span className="label text-muted">seal <Hash value={r.attacks[r.attacks.length - 1].seal?.hash ?? ""} /></span><span className="label flex items-center gap-1">Open <ArrowRight size={12} /></span></div>
                   </Tile>
                 </Link>
               );

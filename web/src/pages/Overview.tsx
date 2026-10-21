@@ -35,7 +35,7 @@ export function Overview() {
             {s.source === "demo" && <Pill tone="amber">demo data</Pill>}
           </div>
           <h1 className="display mt-3 text-[34px] sm:text-[44px]" style={{ textWrap: "balance" }}>
-            {latest ? <>In the last run, <span className="bg-red px-1 text-white">{latest.passed} of {latest.attacks.length}</span> attacks got through {modelName}.</> : <>No runs yet against {modelName}.</>}
+            {latest ? <>In the last run, <span className="text-red-2">{latest.passed} of {latest.attacks.length}</span> attacks got through {modelName}.</> : <>No runs yet against {modelName}.</>}
           </h1>
           <p className="mt-3 text-[15px] text-ink-2">{latest ? `Run ${latest.index} · ${fmtAgo(latest.startedAt, now)} · ${latest.blocked} blocked, ${latest.ambiguous} unsure.` : "Start a run to attack it."}</p>
           {latest && <div className="mt-5 flex items-center gap-3"><VerdictStrip size={16} verdicts={latest.attacks.map((a) => a.error ? "error" : (a.verdict?.data.verdict ?? "pending"))} /><span className="label text-muted">one block per attack</span></div>}
@@ -53,7 +53,7 @@ export function Overview() {
         </Card>
       </div>
 
-      {s.error && <div className="border-[3px] border-ink bg-red px-4 py-3 text-[13.5px] font-semibold text-white">{s.error}</div>}
+      {s.error && <div className="border border-line bg-red px-4 py-3 text-[13.5px] font-semibold text-white">{s.error}</div>}
 
       {/* Three tiles */}
       <div className="grid gap-6 sm:grid-cols-3">
@@ -120,7 +120,7 @@ export function Overview() {
                     <Actor kind="attacker" size={34} />
                     <div className="min-w-0 flex-1"><div className="display truncate text-[16px]">{techniqueLabel(a.technique)}</div><div className="label text-muted">{run ? `Run ${run.index}` : ""} · {fmtAgo(a.ts, now)}</div></div>
                   </div>
-                  <p className="mono mt-4 flex-1 border-2 border-ink bg-white p-3 text-[12px] leading-relaxed">"{a.response?.data.response ?? a.response?.data.responsePreview ?? "(no reply recorded)"}"</p>
+                  <p className="mono mt-4 flex-1 border border-line bg-white p-3 text-[12px] leading-relaxed">"{a.response?.data.response ?? a.response?.data.responsePreview ?? "(no reply recorded)"}"</p>
                   <p className="mt-3 text-[12.5px]"><span className="display text-red-2">Judge:</span> {a.verdict?.data.notes || "no notes"} <span className="mono text-muted">· {Math.round((a.verdict?.data.confidence ?? 0) * 100)}%</span></p>
                   {run && <Link to={`/app/runs/${run.id}`} className="label mt-3 inline-flex items-center gap-1 underline decoration-2 underline-offset-4">See the full run <ArrowRight size={13} /></Link>}
                 </Tile>
@@ -135,7 +135,7 @@ export function Overview() {
         <Heading title="Recent runs" desc="One row per burst of attacks." right={<Link to="/app/runs" className="label underline decoration-2 underline-offset-4">All runs</Link>} />
         <Card className="p-0">
           {runs.slice(0, 5).map((r) => (
-            <Link key={r.id} to={`/app/runs/${r.id}`} className="b-row flex items-center gap-4 px-5 py-4 hover:bg-yellow">
+            <Link key={r.id} to={`/app/runs/${r.id}`} className="b-row flex items-center gap-4 px-5 py-4 hover:bg-white/60">
               <div className="display w-16 text-[16px]">Run {r.index}</div>
               <VerdictStrip size={12} gap={3} verdicts={r.attacks.map((a) => a.error ? "error" : (a.verdict?.data.verdict ?? "pending"))} />
               <div className="flex-1 text-[13px] font-semibold text-ink-2">{r.attacks.length} attacks · {fmtAgo(r.startedAt, now)}</div>

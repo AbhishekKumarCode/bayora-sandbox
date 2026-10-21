@@ -7,7 +7,7 @@ export function cx(...a: Array<string | false | null | undefined>) {
 }
 
 export type Tone = "yellow" | "red" | "green" | "blue" | "violet" | "amber" | "ink";
-export const TONE_HEX: Record<Tone, string> = { yellow: "#ffd23f", red: "#ff4d3d", green: "#2bd36a", blue: "#4f8cff", violet: "#a78bfa", amber: "#ffa62b", ink: "#0d0d0d" };
+export const TONE_HEX: Record<Tone, string> = { yellow: "#7a6a2a", red: "#b8514c", green: "#2f8a5f", blue: "#3f66c4", violet: "#7b66c9", amber: "#a87a1f", ink: "#1f2430" };
 
 /* ---------- Buttons ---------- */
 type BtnProps = ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "ink" | "secondary" | "ghost" | "danger"; size?: "sm" | "md" | "lg"; to?: string };
@@ -32,7 +32,7 @@ export function Pill({ tone = "yellow", children, className, dot }: { tone?: Ton
   return <span className={cx("b-pill", tone, className)}>{dot && <span className="h-2 w-2 bg-current" />}{children}</span>;
 }
 export function Stamp({ tone = "green", children, className, animate }: { tone?: Tone; children: ReactNode; className?: string; animate?: boolean }) {
-  return <span className={cx("b-stamp", animate && "stamp-in", className)} style={{ color: TONE_HEX[tone] === "#ffd23f" ? "#0d0d0d" : TONE_HEX[tone] }}>{children}</span>;
+  return <span className={cx("b-stamp", animate && "stamp-in", className)} style={{ color: TONE_HEX[tone] }}>{children}</span>;
 }
 export function verdictTone(v?: Verdict | null): Tone {
   if (v === "blocked") return "green";
@@ -42,11 +42,11 @@ export function verdictTone(v?: Verdict | null): Tone {
 
 /* ---------- Actor glyphs ---------- */
 export function Actor({ kind, size = 36, className }: { kind: "attacker" | "model" | "judge" | "seal"; size?: number; className?: string }) {
-  const bg = kind === "attacker" ? "var(--color-red)" : kind === "model" ? "var(--color-violet)" : kind === "judge" ? "var(--color-blue)" : "var(--color-green)";
-  const fg = kind === "attacker" || kind === "judge" ? "#fff" : "#0d0d0d";
+  const bg = kind === "attacker" ? "rgb(227 139 134 / .35)" : kind === "model" ? "rgb(195 182 242 / .45)" : kind === "judge" ? "rgb(157 183 240 / .4)" : "rgb(143 211 176 / .4)";
+  const fg = kind === "attacker" ? "var(--color-red-2)" : kind === "model" ? "var(--color-violet-2)" : kind === "judge" ? "var(--color-blue-2)" : "var(--color-green-2)";
   return (
-    <span className={cx("inline-flex shrink-0 items-center justify-center border-[2.5px] border-ink", className)} style={{ width: size, height: size, background: bg, color: fg, boxShadow: "2px 2px 0 var(--color-ink)" }}>
-      <svg width={size * 0.56} height={size * 0.56} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="square" strokeLinejoin="miter">
+    <span className={cx("inline-flex shrink-0 items-center justify-center rounded-[9px]", className)} style={{ width: size, height: size, background: bg, color: fg }}>
+      <svg width={size * 0.56} height={size * 0.56} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         {kind === "attacker" && (<><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z" /><path d="M9 10l6 6M15 10l-6 6" /></>)}
         {kind === "model" && (<><rect x="4" y="5" width="16" height="14" /><path d="M8 9h8M8 13h8M8 17h5" /></>)}
         {kind === "judge" && (<><path d="M12 3v18M5 7h14" /><path d="M5 7l-3 7h6zM19 7l-3 7h6z" /></>)}

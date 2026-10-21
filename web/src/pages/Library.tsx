@@ -71,7 +71,7 @@ export function Library() {
               {ALL.map((t) => {
                 const pct = pctFor(t.id);
                 return (
-                  <tr key={t.id} className={cx("cursor-pointer hover:bg-yellow", sel.id === t.id && "bg-yellow")} onClick={() => setSel(t)}>
+                  <tr key={t.id} className={cx("cursor-pointer hover:bg-white/60", sel.id === t.id && "bg-white/80")} onClick={() => setSel(t)}>
                     <td className="whitespace-nowrap py-1 pr-4 font-bold">{techniqueLabel(t.id)}</td>
                     {runs.map((r) => {
                       const hits = r.attacks.filter((a) => a.technique === t.id);
@@ -92,8 +92,8 @@ export function Library() {
           <Search size={16} strokeWidth={2.5} className="absolute left-3 top-1/2 z-10 -translate-y-1/2" />
           <input id="lib-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search techniques" className="b-input h-11 w-64" style={{ paddingLeft: 40 }} />
         </div>
-        <div className="flex flex-wrap border-[3px] border-ink bg-card">
-          {families.map((f, i) => <button key={f} onClick={() => setFamily(f)} className={cx("label px-3 py-2", i > 0 && "border-l-[3px] border-ink", family === f && "bg-yellow")}>{f}</button>)}
+        <div className="flex flex-wrap border border-line bg-card">
+          {families.map((f, i) => <button key={f} onClick={() => setFamily(f)} className={cx("label px-3 py-2", i > 0 && "border-l border-line", family === f && "bg-white/80")}>{f}</button>)}
         </div>
       </div>
 
@@ -103,7 +103,7 @@ export function Library() {
             const st = statFor(t.id);
             const pct = pctFor(t.id);
             return (
-              <button key={t.id} onClick={() => setSel(t)} className={cx("b-card flex items-center gap-3 p-4 text-left", sel.id === t.id && "bg-yellow")}>
+              <button key={t.id} onClick={() => setSel(t)} className={cx("b-card flex items-center gap-3 p-4 text-left", sel.id === t.id && "bg-white/80")}>
                 <Actor kind="attacker" size={36} />
                 <div className="min-w-0 flex-1">
                   <div className="display truncate text-[15px]">{techniqueLabel(t.id)}</div>
@@ -131,7 +131,7 @@ export function Library() {
             </div>
             <p className="mt-4 text-[15px] font-semibold">{sel.summary}</p>
             <div className="label mt-5 text-muted">The exact prompt the red room sends</div>
-            <pre className="mono mt-2 whitespace-pre-wrap border-[3px] border-ink bg-white p-4 text-[12.5px] leading-relaxed">{sel.prompt}</pre>
+            <pre className="mono mt-2 whitespace-pre-wrap border border-line bg-white p-4 text-[12.5px] leading-relaxed">{sel.prompt}</pre>
             {(() => { const st = statFor(sel.id); return st ? (
               <div className="mt-5 grid grid-cols-3 gap-3">
                 <Mini k="Fired" v={st.total} />
@@ -139,7 +139,7 @@ export function Library() {
                 <Mini k="Got through" v={st.total - st.blocked} tone={st.total - st.blocked > 0 ? "red" : undefined} />
               </div>
             ) : <div className="mt-5 text-[13px] text-muted">Not fired yet in the current data.</div>; })()}
-            <div className="mt-5 border-[3px] border-ink bg-blue p-4 text-[13px] font-semibold text-white">
+            <div className="mt-5 border border-line bg-blue p-4 text-[13px] font-semibold text-white">
               <span className="display">Blind guarantee.</span> The judge never sees this prompt or its name, so it cannot pattern-match on the attack. It scores the reply alone.
             </div>
           </Tile>
@@ -151,7 +151,7 @@ export function Library() {
 
 function Mini({ k, v, tone }: { k: string; v: React.ReactNode; tone?: "sealed" | "red" }) {
   return (
-    <div className="border-[3px] border-ink bg-white p-3">
+    <div className="border border-line bg-white p-3">
       <div className="label text-muted">{k}</div>
       <div className={cx("display mt-1 text-[26px]", tone === "sealed" && "text-green-2", tone === "red" && "text-red-2")}>{v}</div>
     </div>

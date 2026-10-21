@@ -7,6 +7,9 @@ import { complete, isMockMode, llmInfo, llmDetails, setModel, listModels, SYSTEM
 const RED_TEAM_TOKEN = process.env.RED_TEAM_TOKEN;
 const BLUE_TEAM_TOKEN = process.env.BLUE_TEAM_TOKEN;
 const AUDIT_TOKEN = process.env.AUDIT_TOKEN;
+// Optional read-only role for public viewers (judges, visitors): can read the
+// chain, verify it and see config, but cannot start runs or change the model.
+const VIEWER_TOKEN = process.env.VIEWER_TOKEN || "";
 
 for (const [name, val] of Object.entries({ RED_TEAM_TOKEN, BLUE_TEAM_TOKEN, AUDIT_TOKEN })) {
   if (!val) throw new Error(`${name} is required — refusing to run with no role authentication`);
@@ -24,12 +27,14 @@ app.use((req, res, next) => {
   next();
 });
 
-function requireToken(expected) {
+function requireToken(...accepted) {
+  const ok = accepted.filter(Boolean);
   return (req, res, next) => {
     const got = req.header("authorization")?.replace(/^Bearer\s+/i, "");
-    if (got !== expected) {
+    if (!got || !ok.includes(got)) {
       return res.status(403).json({ error: "forbidden" });
     }
+    req.role = got === AUDIT_TOKEN ? "operator" : got === VIEWER_TOKEN ? "viewer" : got === RED_TEAM_TOKEN ? "red" : "blue";
     next();
   };
 }
@@ -46,7 +51,7 @@ const KNOWN_VERDICTS = new Set(["blocked", "passed_through", "ambiguous"]);
 const TECHNIQUE_PATTERN = /^[a-z0-9_]{1,64}$/; // matches the labels in red-team/attacks.json
 
 app.get("/health", (req, res) => {
-  res.json({ ok: true, mockMode: isMockMode(), ...llmInfo() });
+  res.json({ ok: true, mockMode: isMockMode(), ...llmInfo(), viewer: Boolean(VIEWER_TOKEN) });
 });
 
 // Shared by /submit-attack (red-team, one at a time) and /trigger-run
@@ -160,15 +165,15 @@ app.post("/run-done", requireToken(RED_TEAM_TOKEN), (req, res) => {
 
 // ---- Operator endpoints (AUDIT_TOKEN): see and steer the test, never the judge ----
 
-app.get("/attacks", requireToken(AUDIT_TOKEN), async (req, res) => {
+app.get("/attacks", requireToken(AUDIT_TOKEN, VIEWER_TOKEN), async (req, res) => {
   res.json({ attacks: await readAttackCatalog() });
 });
 
-app.get("/config", requireToken(AUDIT_TOKEN), (req, res) => {
-  res.json({ ...llmDetails(), mockMode: isMockMode(), systemPrompt: SYSTEM_PROMPT, runInProgress });
+app.get("/config", requireToken(AUDIT_TOKEN, VIEWER_TOKEN), (req, res) => {
+  res.json({ ...llmDetails(), mockMode: isMockMode(), systemPrompt: SYSTEM_PROMPT, runInProgress, role: req.role });
 });
 
-app.get("/models", requireToken(AUDIT_TOKEN), async (req, res) => {
+app.get("/models", requireToken(AUDIT_TOKEN, VIEWER_TOKEN), async (req, res) => {
   try {
     res.json({ models: await listModels(), current: llmDetails().model });
   } catch (err) {
@@ -220,12 +225,12 @@ app.post("/score", requireToken(BLUE_TEAM_TOKEN), async (req, res) => {
 // only to the broker/host, never to the red-team or blue-team containers.
 // This is what actually stops blue-team from reading attack prompts out of
 // the log even though it's on the same Docker network as the broker.
-app.get("/audit", requireToken(AUDIT_TOKEN), async (req, res) => {
+app.get("/audit", requireToken(AUDIT_TOKEN, VIEWER_TOKEN), async (req, res) => {
   const entries = await readAllEntries();
   res.json({ count: entries.length, entries });
 });
 
-app.get("/verify", requireToken(AUDIT_TOKEN), async (req, res) => {
+app.get("/verify", requireToken(AUDIT_TOKEN, VIEWER_TOKEN), async (req, res) => {
   // ?simulateTamperSeq=N is a demo-only affordance for the dashboard's
   // "Tamper" button — it checks what detection would look like if entry N
   // were altered, entirely in memory. It never writes to the real log.
