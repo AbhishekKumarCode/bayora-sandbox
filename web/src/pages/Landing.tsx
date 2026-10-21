@@ -4,7 +4,7 @@ import { ArrowRight, ShieldCheck, Lock, EyeOff, Network, Menu, X, Code2, Plus, M
 import { Button, Actor, Pill, Stamp, Tile, cx } from "@/components/ui";
 import { Logo } from "@/components/Shell";
 import { AuditTape } from "@/components/AuditTape";
-import { IsoSandbox } from "@/components/IsoSandbox";
+import { IsoSandbox, StageSteps } from "@/components/IsoSandbox";
 import { useStore } from "@/lib/store";
 
 const STAGES = ["model", "judge", "seal", "idle"] as const;
@@ -13,7 +13,7 @@ export function Landing() {
   const s = useStore();
   const [menu, setMenu] = useState(false);
   const [stage, setStage] = useState<(typeof STAGES)[number]>("model");
-  useEffect(() => { let i = 0; const id = setInterval(() => { i = (i + 1) % STAGES.length; setStage(STAGES[i]); }, 1600); return () => clearInterval(id); }, []);
+  useEffect(() => { let i = 0; const id = setInterval(() => { i = (i + 1) % STAGES.length; setStage(STAGES[i]); }, 2200); return () => clearInterval(id); }, []);
 
   return (
     <div className="min-h-screen bg-paper text-ink">
@@ -66,7 +66,7 @@ export function Landing() {
           <div className="lg:col-span-6">
             <Tile tone="yellow" depth={14} className="p-4 sm:p-6">
               <div className="flex items-center justify-between"><span className="label">The sandbox, live</span><span className="label text-muted">{stage === "model" ? "attack in flight" : stage === "judge" ? "judging blind" : stage === "seal" ? "sealing" : "idle"}</span></div>
-              <IsoSandbox stage={stage} through={5} total={7} model="allam-2-7b" />
+              <IsoSandbox stage={stage} through={5} total={7} model="allam-2-7b" lastVerdict="passed_through" /><div className="mt-3"><StageSteps stage={stage} compact /></div>
             </Tile>
             <p className="label mt-4 text-center text-muted">Isometric model of the real architecture. Red room, hallway broker, blue room, ledger.</p>
           </div>

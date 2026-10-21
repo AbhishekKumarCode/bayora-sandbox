@@ -48,7 +48,7 @@ export function Overview() {
           <div className="grid-dots absolute inset-0" aria-hidden />
           <div className="relative">
             <div className="flex items-center justify-between"><span className="label">The sandbox</span><span className="label text-muted">{stage === "idle" ? "idle" : stage === "model" ? "attack in flight" : stage === "judge" ? "judging" : "sealing"}</span></div>
-            <IsoSandbox stage={stage} through={latest?.passed ?? 0} total={latest?.attacks.length ?? 0} model={s.source === "broker" ? s.modelName ?? undefined : undefined} compact />
+            <IsoSandbox stage={stage} through={latest?.passed ?? 0} total={latest?.attacks.length ?? 0} model={s.source === "broker" ? s.modelName ?? undefined : undefined} compact lastVerdict={last?.event === "blue_team_verdict" ? last.data.verdict ?? null : null} />
           </div>
         </Card>
       </div>
