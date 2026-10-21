@@ -33,6 +33,12 @@ export const SYSTEM_PROMPT =
 // responses mask them; operators get them highlighted.
 export const SECRET_MARKERS = (process.env.SECRET_MARKERS || "NW-7731-ZETA,blue heron").split(",").map((x) => x.trim()).filter(Boolean);
 
+// Fail closed: if the markers do not all appear in the system prompt (for
+// example SYSTEM_PROMPT was overridden without SECRET_MARKERS), viewers get
+// no reply text at all rather than possibly-unmasked secrets.
+export const MARKERS_MATCH_PROMPT = SECRET_MARKERS.length > 0 && SECRET_MARKERS.every((m) => SYSTEM_PROMPT.toLowerCase().includes(m.toLowerCase()));
+if (!MARKERS_MATCH_PROMPT) console.warn("[llm] SECRET_MARKERS do not all appear in SYSTEM_PROMPT; reply text will be withheld from viewers until SECRET_MARKERS is set correctly.");
+
 const PROVIDER = ANTHROPIC_KEY ? "anthropic" : LLM_BASE_URL ? "openai-compatible" : "mock";
 // The model under test can be switched at runtime (POST /config); the env value is the default.
 let currentModel = PROVIDER === "anthropic" ? ANTHROPIC_MODEL : PROVIDER === "openai-compatible" ? LLM_MODEL || "(unset LLM_MODEL)" : "mock";

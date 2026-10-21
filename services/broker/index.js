@@ -2,7 +2,7 @@ import express from "express";
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { appendEntry, readAllEntries, verifyChain } from "./audit.js";
-import { complete, isMockMode, llmInfo, llmDetails, setModel, listModels, SYSTEM_PROMPT, SECRET_MARKERS } from "./llm.js";
+import { complete, isMockMode, llmInfo, llmDetails, setModel, listModels, SYSTEM_PROMPT, SECRET_MARKERS, MARKERS_MATCH_PROMPT } from "./llm.js";
 
 const RED_TEAM_TOKEN = process.env.RED_TEAM_TOKEN;
 const BLUE_TEAM_TOKEN = process.env.BLUE_TEAM_TOKEN;
@@ -273,18 +273,32 @@ app.get("/audit", requireToken(AUDIT_TOKEN, VIEWER_TOKEN), async (req, res) => {
     // The viewer token lives in the public web build. Strip prompts so that
     // nothing reachable with it could hand the judge the attack text, and
     // mask the leaked secrets themselves so the record does not re-leak them.
-    const mask = (t) => SECRET_MARKERS.reduce((acc, m) => (m ? acc.split(m).join("[secret · hidden for viewers]") : acc), String(t ?? ""));
-    const maskCI = (t) => SECRET_MARKERS.reduce((acc, m) => (m ? acc.replace(new RegExp(m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"), "[secret · hidden for viewers]") : acc), String(t ?? ""));
+    const WITHHELD = "[reply withheld for viewers: secret markers not configured]";
+    const MASK = "[secret · hidden for viewers]";
+    // Fuzzy, fail-safe masking: NFKC-normalise, and allow any whitespace or
+    // punctuation between the marker's characters, so "NW - 7731 ZETA" or a
+    // code-fenced split still matches. Applied to every free-text field.
+    const fuzzy = SECRET_MARKERS.map((m) => new RegExp(Array.from(m.normalize("NFKC")).filter((c) => /[\p{L}\p{N}]/u.test(c)).map((c) => c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("[\\s\\p{P}\\p{S}_]*"), "giu"));
+    const maskText = (t) => {
+      if (t == null) return undefined;
+      if (!MARKERS_MATCH_PROMPT) return WITHHELD;
+      let out = String(t).normalize("NFKC");
+      for (const re of fuzzy) out = out.replace(re, MASK);
+      return out;
+    };
     return res.json({
       count: entries.length, redacted: true,
       entries: entries.map((e) => {
         if (e.event === "attack_submitted") return { ...e, data: { ...e.data, prompt: undefined, promptRedacted: true } };
-        if (e.event === "llm_response_received") return { ...e, data: { ...e.data, response: e.data.response != null ? maskCI(e.data.response) : undefined, responsePreview: maskCI(e.data.responsePreview), secretsMasked: true } };
-        if (e.event === "blue_team_verdict") return { ...e, data: { ...e.data, notes: maskCI(e.data.notes) } };
+        if (e.event === "llm_response_received") {
+          const full = maskText(e.data.response ?? e.data.responsePreview);
+          return { ...e, data: { ...e.data, response: e.data.response != null ? full : undefined, responsePreview: full == null ? undefined : full.slice(0, 120), secretsMasked: true } };
+        }
+        if (e.event === "blue_team_verdict") return { ...e, data: { ...e.data, notes: maskText(e.data.notes) } };
+        if (e.event === "llm_error") return { ...e, data: { ...e.data, error: maskText(e.data.error) } };
         return e;
       }),
     });
-    void mask;
   }
   res.json({ count: entries.length, entries });
 });
