@@ -47,7 +47,7 @@ export function Shell() {
       </div>
       <div className="mt-2 flex items-center gap-2">
         {s.source === "broker" ? <Plug size={16} strokeWidth={2.5} /> : <Database size={16} strokeWidth={2.5} />}
-        <div className="display text-[15px]">{s.source === "broker" ? (s.role === "operator" ? "Live · operator" : "Live · read-only") : "Demo data"}</div>
+        <div className="display text-[15px]">{s.source === "broker" ? (s.role === "operator" ? "Live · operator" : "Live · read-only") : "Not connected"}</div>
         {s.mockMode && s.source === "broker" && <Pill tone="amber" className="ml-auto">mock</Pill>}
       </div>
       <div className="mt-3">
@@ -88,8 +88,8 @@ export function Shell() {
                 {live && <Pill tone="red" dot className="hidden sm:inline-flex">run in progress</Pill>}
                 <div className="hidden items-center gap-2 rounded-full border border-line bg-white/70 py-1 pl-3 pr-1.5 text-[12.5px] font-semibold md:flex" title={getBrokerUrl()}>
                   <span className={cx("h-2.5 w-2.5 border border-line", s.brokerOnline ? "bg-green" : s.brokerOnline === false ? "bg-red" : "bg-faint")} />
-                  <span className="mono text-[11px] font-bold uppercase tracking-wide">
-                    {s.brokerOnline === false ? "broker unreachable" : s.source === "broker" ? `${s.role === "operator" ? "operator" : "live · read-only"} · ${sinceLastPoll == null ? "…" : sinceLastPoll + "s"}` : s.brokerOnline ? `online${s.mockMode ? " · mock" : ""} · demo` : "checking"}
+                  <span className="text-[12px] font-semibold">
+                    {s.brokerOnline === false ? "broker unreachable" : s.source === "broker" ? `${s.role === "operator" ? "operator" : "live · read-only"} · ${sinceLastPoll == null ? "…" : sinceLastPoll + "s"}` : s.brokerOnline ? `online${s.mockMode ? " · mock" : ""}` : "checking"}
                   </span>
                   {s.role === "operator"
                     ? <button onClick={s.disconnect} className="b-pill ink cursor-pointer">lock</button>

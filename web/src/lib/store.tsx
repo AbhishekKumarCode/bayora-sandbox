@@ -1,6 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ForbiddenError, VIEWER_TOKEN, clearToken, getAudit, getConfig, getHealth, getStoredToken, healStaleBrokerUrl, storeToken, triggerRun as apiTriggerRun, triggerCompare as apiTriggerCompare, verifyChain as apiVerify, type AuditEntry, type VerifyResult } from "./api";
-import { demoEntries } from "./demo";
 
 export type Source = "demo" | "broker";
 
@@ -32,7 +31,7 @@ const POLL_MS = 2000;
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [source, setSource] = useState<Source>(() => (getStoredToken() || VIEWER_TOKEN ? "broker" : "demo"));
   const [role, setRole] = useState<Role>(() => (getStoredToken() ? "operator" : "viewer"));
-  const [entries, setEntries] = useState<AuditEntry[]>(() => demoEntries());
+  const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [brokerOnline, setBrokerOnline] = useState<boolean | null>(null);
   const [mockMode, setMockMode] = useState(false);
   const [modelName, setModelName] = useState<string | null>(null);
@@ -69,13 +68,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (getStoredToken()) {
           clearToken();
           setRole("viewer");
-          setError(VIEWER_TOKEN ? "The operator token was rejected. Back to read-only viewing." : "The audit token was rejected. Switched back to demo data.");
-          if (!VIEWER_TOKEN) { setConnected(false); setSource("demo"); setEntries(demoEntries()); }
+          setError(VIEWER_TOKEN ? "The operator token was rejected. Back to read-only viewing." : "The audit token was rejected.");
+          if (!VIEWER_TOKEN) { setConnected(false); setSource("demo"); setEntries([]); }
         } else {
           setConnected(false);
           setSource("demo");
-          setEntries(demoEntries());
-          setError("The broker rejected the viewer token. Showing demo data.");
+          setEntries([]);
+          setError("The broker rejected the viewer token.");
         }
       } else {
         setError(e instanceof Error ? e.message : String(e));
@@ -133,25 +132,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     clearToken();
     setRole("viewer");
     setError(null);
-    if (!VIEWER_TOKEN) { setConnected(false); setSource("demo"); setEntries(demoEntries()); }
+    if (!VIEWER_TOKEN) { setConnected(false); setSource("demo"); setEntries([]); }
   }, []);
 
   const useDemo = useCallback(() => {
     setSource("demo");
     setConnected(false);
-    setEntries(demoEntries());
+    setEntries([]);
   }, []);
 
   const verify = useCallback(async (simulateTamperSeq?: number): Promise<VerifyResult> => {
     if (source === "broker") return apiVerify(simulateTamperSeq);
-    // demo: pretend
-    await new Promise((r) => setTimeout(r, 500));
-    if (simulateTamperSeq != null) return { ok: false, brokenAtSeq: simulateTamperSeq, reason: "data was altered" };
-    return { ok: true, count: entries.length, finalHash: entries[entries.length - 1]?.hash ?? "" };
-  }, [source, entries]);
+    throw new Error("Not connected to a broker.");
+  }, [source]);
 
   const guard = useCallback(() => {
-    if (source !== "broker") throw new Error("Connect to a broker to start a real run. Demo data is read-only.");
+    if (source !== "broker") throw new Error("Not connected to a broker.");
     if (role !== "operator") throw new Error("Starting a run needs the operator token. Visitors can watch, verify and read everything.");
   }, [source, role]);
   const triggerRun = useCallback(async (model?: string) => { guard(); const r = await apiTriggerRun(model); return r.status; }, [guard]);

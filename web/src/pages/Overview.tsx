@@ -22,7 +22,7 @@ export function Overview() {
   const [verify, setVerify] = useState<VerifyResult | null>(null);
   const [verifying, setVerifying] = useState(false);
   async function doVerify() { setVerifying(true); try { setVerify(await s.verify()); } finally { setVerifying(false); } }
-  const modelName = s.source === "demo" ? "the demo model" : s.mockMode ? "the mock model" : s.modelName ?? "the model under test";
+  const modelName = s.mockMode ? "the mock model" : s.modelName ?? "the model under test";
 
   return (
     <div className="space-y-10">
@@ -32,7 +32,7 @@ export function Overview() {
           <div className="flex items-center gap-2">
             <span className="label text-muted">Overview</span>
             {live && <Pill tone="red" dot>run in progress</Pill>}
-            {s.source === "demo" && <Pill tone="amber">demo data</Pill>}
+            {s.source !== "broker" && <Pill tone="amber">not connected</Pill>}
           </div>
           <h1 className="display mt-3 text-[34px] sm:text-[44px]" style={{ textWrap: "balance" }}>
             {latest ? <>In the last run, <span className="text-red-2">{latest.passed} of {latest.attacks.length}</span> attacks got through {modelName}.</> : <>No runs yet against {modelName}.</>}

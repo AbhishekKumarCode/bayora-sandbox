@@ -37,10 +37,10 @@ export function Settings() {
 
       <Card className="p-5">
         <div className="label text-muted">Data source</div>
-        <div className="display mt-2 text-[20px]">{s.source === "broker" ? "Live broker" : "Demo data"}</div>
-        <div className="mt-1 text-[13px] font-semibold text-ink-2">{s.source === "broker" ? "The audit token lives in this tab's session storage only." : "Built-in sample log. Nothing is sent anywhere."}</div>
+        <div className="display mt-2 text-[20px]">{s.source === "broker" ? "Live broker" : "Not connected"}</div>
+        <div className="mt-1 text-[13px] font-semibold text-ink-2">{s.source === "broker" ? "The audit token lives in this tab's session storage only." : "No broker reachable. Nothing to show."}</div>
         <div className="mt-4 flex gap-2">
-          {s.source === "broker" ? <Button onClick={s.disconnect}>Disconnect and use demo data</Button> : <Button variant="primary" onClick={() => setOpen(true)}>Connect broker</Button>}
+          {s.source === "broker" ? <Button onClick={s.disconnect}>Lock controls</Button> : <Button variant="primary" onClick={() => setOpen(true)}>Connect broker</Button>}
         </div>
       </Card>
 

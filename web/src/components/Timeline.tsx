@@ -61,3 +61,22 @@ function Line({ kind, label, children }: { kind: "attacker" | "model" | "judge";
     </div>
   );
 }
+
+/** Compact card for the Live page: technique, verdict, a two-line reply, the judge's reason. */
+export function AttackMiniCard({ a, animate = false, onOpen }: { a: Attack; animate?: boolean; onOpen?: () => void }) {
+  const v = a.verdict?.data.verdict;
+  const through = v === "passed_through";
+  const reply = a.error ? a.error.data.error : a.response?.data.response ?? a.response?.data.responsePreview;
+  return (
+    <button onClick={onOpen} className={cx("b-card flex w-full flex-col p-4 text-left transition-transform hover:-translate-y-[2px]", animate && "rise")} style={through ? { boxShadow: "0 0 0 1.5px var(--color-red-2), 0 8px 30px -14px rgb(184 81 76 / .35)" } : undefined}>
+      <div className="flex items-center gap-2">
+        <Actor kind="attacker" size={26} />
+        <span className="min-w-0 flex-1 truncate text-[14px] font-semibold">{techniqueLabel(a.technique)}</span>
+        {a.verdict || a.error ? <Stamp tone={a.error ? "red" : verdictTone(v)} className="!text-[11px]">{a.error ? "error" : verdictLabel(v)}</Stamp> : <span className="b-pill amber">judging</span>}
+      </div>
+      <p className="mono mt-3 line-clamp-2 text-[12px] leading-relaxed text-ink">{reply ? `"${reply}"` : <span className="text-amber-2">waiting for the model…</span>}</p>
+      <p className="mt-2 line-clamp-2 text-[12px] text-muted">{a.verdict ? <><span className={cx("font-semibold", through ? "text-red-2" : v === "blocked" ? "text-green-2" : "text-amber-2")}>Judge:</span> {a.verdict.data.notes?.replace(/^llm judge \([^)]*\): /, "")}</> : "Awaiting the blind verdict."}</p>
+      <div className="mt-3 flex items-center justify-between text-[11.5px] text-muted"><span>{fmtTime(a.ts)}</span>{a.seal && <span>sealed #{a.seal.seq}</span>}</div>
+    </button>
+  );
+}
