@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink, Outlet, Link, useLocation } from "react-router-dom";
-import { LayoutGrid, ListChecks, Radio, Library, Link2, Settings2, Menu, X, Plug, Database } from "lucide-react";
+import { LayoutGrid, ListChecks, Radio, Library, Link2, Settings2, Menu, X, Plug, Database, GitCompare } from "lucide-react";
 import { useStore, useNow } from "@/lib/store";
 import { isLive } from "@/lib/model";
 import { Button, Pill, cx } from "./ui";
@@ -11,6 +11,7 @@ const NAV = [
   { to: "/app", label: "Overview", icon: LayoutGrid, end: true },
   { to: "/app/runs", label: "Runs", icon: ListChecks },
   { to: "/app/live", label: "Live run", icon: Radio },
+  { to: "/app/compare", label: "Compare models", icon: GitCompare },
   { to: "/app/library", label: "Attack library", icon: Library },
   { to: "/app/audit", label: "Audit chain", icon: Link2 },
 ];

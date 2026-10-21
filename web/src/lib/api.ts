@@ -104,15 +104,15 @@ export async function verifyChain(simulateTamperSeq?: number): Promise<VerifyRes
   return res.json();
 }
 
-export async function triggerRun(): Promise<{ status: string }> {
-  const res = await safeFetch(`${getBrokerUrl()}/trigger-run`, { method: "POST", headers: authHeaders() });
+export async function triggerRun(model?: string): Promise<{ status: string }> {
+  const res = await safeFetch(`${getBrokerUrl()}/trigger-run`, { method: "POST", headers: { ...authHeaders(), "content-type": "application/json" }, body: JSON.stringify(model ? { model } : {}) });
   const json = await res.json().catch(() => ({}));
   if (res.status === 401 || res.status === 403) throw new ForbiddenError("bad AUDIT_TOKEN");
   if (!res.ok) throw new Error(json.error || `trigger-run ${res.status}`);
   return json;
 }
 
-export type BrokerConfig = { provider: string; model: string; baseUrl: string | null; mockMode: boolean; systemPrompt: string; runInProgress: boolean; role?: "operator" | "viewer" };
+export type BrokerConfig = { provider: string; model: string; baseUrl: string | null; mockMode: boolean; systemPrompt: string; runInProgress: boolean; compare?: { models: string[]; index: number; startedAt: number } | null; role?: "operator" | "viewer" };
 export type CatalogAttack = { technique: string; prompt: string };
 
 async function auditGet<T>(path: string): Promise<T> {
@@ -131,5 +131,13 @@ export async function setModel(model: string): Promise<BrokerConfig> {
   const j = await res.json().catch(() => ({}));
   if (res.status === 401 || res.status === 403) throw new ForbiddenError("bad AUDIT_TOKEN");
   if (!res.ok) throw new Error(j.error || `config ${res.status}`);
+  return j;
+}
+
+export async function triggerCompare(models: string[]): Promise<{ status: string; models: string[] }> {
+  const res = await safeFetch(`${getBrokerUrl()}/trigger-compare`, { method: "POST", headers: { ...authHeaders(), "content-type": "application/json" }, body: JSON.stringify({ models }) });
+  const j = await res.json().catch(() => ({}));
+  if (res.status === 401 || res.status === 403) throw new ForbiddenError("bad AUDIT_TOKEN");
+  if (!res.ok) throw new Error(j.error || `trigger-compare ${res.status}`);
   return j;
 }

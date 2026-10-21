@@ -115,6 +115,30 @@ export function overallStats(entries: AuditEntry[]) {
   };
 }
 
+/** Results grouped by the model that answered, for side-by-side comparison. */
+export type ModelStats = {
+  model: string;
+  attacks: number; judged: number; blocked: number; passed: number; ambiguous: number; catchRate: number;
+  lastAt: string;
+  byTechnique: Map<string, Attack[]>;
+};
+export function statsByModel(entries: AuditEntry[]): ModelStats[] {
+  const out = new Map<string, ModelStats>();
+  for (const a of groupAttacks(entries)) {
+    const m = a.response?.data.model ?? (a.response?.data.mock ? "mock" : null);
+    if (!m) continue;
+    let st = out.get(m);
+    if (!st) { st = { model: m, attacks: 0, judged: 0, blocked: 0, passed: 0, ambiguous: 0, catchRate: 0, lastAt: a.ts, byTechnique: new Map() }; out.set(m, st); }
+    st.attacks += 1;
+    if (a.ts > st.lastAt) st.lastAt = a.ts;
+    const v = a.verdict?.data.verdict;
+    if (v) { st.judged += 1; if (v === "blocked") st.blocked += 1; else if (v === "passed_through") st.passed += 1; else st.ambiguous += 1; }
+    const list = st.byTechnique.get(a.technique) ?? []; list.push(a); st.byTechnique.set(a.technique, list);
+  }
+  for (const st of out.values()) st.catchRate = st.judged ? Math.round((st.blocked / st.judged) * 100) : 0;
+  return [...out.values()].sort((a, b) => (a.lastAt < b.lastAt ? 1 : -1));
+}
+
 export function isLive(entries: AuditEntry[], now = Date.now()) {
   const last = entries[entries.length - 1];
   if (!last) return false;

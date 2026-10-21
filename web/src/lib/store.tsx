@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ForbiddenError, VIEWER_TOKEN, clearToken, getAudit, getConfig, getHealth, getStoredToken, healStaleBrokerUrl, storeToken, triggerRun as apiTriggerRun, verifyChain as apiVerify, type AuditEntry, type VerifyResult } from "./api";
+import { ForbiddenError, VIEWER_TOKEN, clearToken, getAudit, getConfig, getHealth, getStoredToken, healStaleBrokerUrl, storeToken, triggerRun as apiTriggerRun, triggerCompare as apiTriggerCompare, verifyChain as apiVerify, type AuditEntry, type VerifyResult } from "./api";
 import { demoEntries } from "./demo";
 
 export type Source = "demo" | "broker";
@@ -21,7 +21,8 @@ type Store = {
   disconnect: () => void;
   useDemo: () => void;
   verify: (simulateTamperSeq?: number) => Promise<VerifyResult>;
-  triggerRun: () => Promise<string>;
+  triggerRun: (model?: string) => Promise<string>;
+  triggerCompare: (models: string[]) => Promise<string>;
 };
 
 const Ctx = createContext<Store | null>(null);
@@ -149,17 +150,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return { ok: true, count: entries.length, finalHash: entries[entries.length - 1]?.hash ?? "" };
   }, [source, entries]);
 
-  const triggerRun = useCallback(async () => {
+  const guard = useCallback(() => {
     if (source !== "broker") throw new Error("Connect to a broker to start a real run. Demo data is read-only.");
     if (role !== "operator") throw new Error("Starting a run needs the operator token. Visitors can watch, verify and read everything.");
-    const r = await apiTriggerRun();
-    return r.status;
   }, [source, role]);
+  const triggerRun = useCallback(async (model?: string) => { guard(); const r = await apiTriggerRun(model); return r.status; }, [guard]);
+  const triggerCompare = useCallback(async (models: string[]) => { guard(); const r = await apiTriggerCompare(models); return r.status; }, [guard]);
 
   const value = useMemo<Store>(() => ({
     source, role, connected, brokerOnline, mockMode, modelName, entries, loading, error, lastPollAt,
-    connect, disconnect, useDemo, verify, triggerRun, recheckHealth,
-  }), [source, role, connected, brokerOnline, mockMode, modelName, entries, loading, error, lastPollAt, connect, disconnect, useDemo, verify, triggerRun, recheckHealth]);
+    connect, disconnect, useDemo, verify, triggerRun, triggerCompare, recheckHealth,
+  }), [source, role, connected, brokerOnline, mockMode, modelName, entries, loading, error, lastPollAt, connect, disconnect, useDemo, verify, triggerRun, triggerCompare, recheckHealth]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

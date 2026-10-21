@@ -115,18 +115,29 @@ async function readAttackCatalog() {
   return JSON.parse(raw);
 }
 
+function startRun() {
+  runInProgress = true;
+  runRequested = true;
+  runClaimedAt = 0;
+}
+
 app.post("/trigger-run", requireToken(AUDIT_TOKEN), async (req, res) => {
   if (runInProgress) {
     return res.status(409).json({ error: "a run is already in progress" });
   }
-  runInProgress = true;
-  runRequested = true;
-  runClaimedAt = 0;
-  res.json({ status: "started" });
+  if (req.body?.model) {
+    try { setModel(req.body.model); } catch (err) { return res.status(err.status || 400).json({ error: err.message }); }
+  }
+  startRun();
+  res.json({ status: "started", model: llmDetails().model });
 
-  // Give the red container a few seconds to claim the run so the attacks
-  // cross the real red-net boundary. If it never shows up (not running,
-  // older image), fire in-process and say so in the log (source=broker).
+  fallbackIfUnclaimed();
+});
+
+// Give the red container a few seconds to claim the run so the attacks
+// cross the real red-net boundary. If it never shows up (not running,
+// older image), fire in-process and say so in the log (source=broker).
+function fallbackIfUnclaimed() {
   (async () => {
     const deadline = Date.now() + RED_CLAIM_WAIT_MS;
     while (runRequested && Date.now() < deadline) await new Promise((r) => setTimeout(r, 250));
@@ -144,6 +155,35 @@ app.post("/trigger-run", requireToken(AUDIT_TOKEN), async (req, res) => {
       }
     } finally {
       runInProgress = false;
+    }
+  })();
+}
+
+// Run the whole suite against several models, one after another, so the
+// results can be compared. Each run records the model on every reply.
+let compareState = null; // { models, index, startedAt }
+app.post("/trigger-compare", requireToken(AUDIT_TOKEN), async (req, res) => {
+  const models = Array.isArray(req.body?.models) ? req.body.models.filter((m) => typeof m === "string").slice(0, 4) : [];
+  if (models.length < 2) return res.status(400).json({ error: "models: give at least two model ids" });
+  if (runInProgress || compareState) return res.status(409).json({ error: "a run is already in progress" });
+  for (const m of models) { try { setModel(m); } catch (err) { return res.status(err.status || 400).json({ error: `${m}: ${err.message}` }); } }
+  compareState = { models, index: 0, startedAt: Date.now() };
+  res.json({ status: "started", models });
+  (async () => {
+    try {
+      for (let i = 0; i < models.length; i++) {
+        compareState.index = i;
+        setModel(models[i]);
+        startRun();
+        fallbackIfUnclaimed();
+        // wait for this run to finish (red container calls /run-done, or the fallback clears it)
+        const deadline = Date.now() + 10 * 60 * 1000;
+        while (runInProgress && Date.now() < deadline) await new Promise((r) => setTimeout(r, 500));
+        // leave a gap so the dashboard groups the next run separately (> RUN_GAP in the UI)
+        if (i < models.length - 1) await new Promise((r) => setTimeout(r, 50 * 1000));
+      }
+    } finally {
+      compareState = null;
     }
   })();
 });
@@ -171,8 +211,8 @@ app.get("/attacks", requireToken(AUDIT_TOKEN), async (req, res) => {
 
 app.get("/config", requireToken(AUDIT_TOKEN, VIEWER_TOKEN), (req, res) => {
   const d = llmDetails();
-  if (req.role === "viewer") return res.json({ provider: d.provider, model: d.model, baseUrl: null, mockMode: isMockMode(), systemPrompt: null, runInProgress, role: "viewer" });
-  res.json({ ...d, mockMode: isMockMode(), systemPrompt: SYSTEM_PROMPT, runInProgress, role: req.role });
+  if (req.role === "viewer") return res.json({ provider: d.provider, model: d.model, baseUrl: null, mockMode: isMockMode(), systemPrompt: null, runInProgress, compare: compareState, role: "viewer" });
+  res.json({ ...d, mockMode: isMockMode(), systemPrompt: SYSTEM_PROMPT, runInProgress, compare: compareState, role: req.role });
 });
 
 app.get("/models", requireToken(AUDIT_TOKEN, VIEWER_TOKEN), async (req, res) => {

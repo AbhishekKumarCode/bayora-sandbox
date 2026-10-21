@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { Cpu, RefreshCw, Check } from "lucide-react";
+import { Cpu, RefreshCw, Check, GitCompare } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { getBrokerUrl, getConfig, getModels, setModel, type BrokerConfig } from "@/lib/api";
+import { Link } from "react-router-dom";
 import { Button, Card, Tile, Pill, cx } from "@/components/ui";
 import { ConnectDialog } from "@/components/ConnectDialog";
 
@@ -64,6 +65,9 @@ function ModelCard() {
   const [busy, setBusy] = useState<"load" | "save" | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
+  const [second, setSecond] = useState("");
+  const [cmpMsg, setCmpMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [cmpBusy, setCmpBusy] = useState(false);
 
   async function load() {
     setBusy("load"); setMsg(null);
@@ -85,6 +89,16 @@ function ModelCard() {
       s.recheckHealth();
     } catch (e) { setMsg({ ok: false, text: e instanceof Error ? e.message : String(e) }); }
     finally { setBusy(null); }
+  }
+
+  async function runBoth() {
+    if (!cfg || !second || second === cfg.model) return;
+    setCmpBusy(true); setCmpMsg(null);
+    try {
+      await s.triggerCompare([cfg.model, second]);
+      setCmpMsg({ ok: true, text: `Running the full suite against ${cfg.model}, then ${second}. Each run is sealed separately with the model name on every reply; the Compare page fills in as they land (about two minutes).` });
+    } catch (e) { setCmpMsg({ ok: false, text: e instanceof Error ? e.message : String(e) }); }
+    finally { setCmpBusy(false); }
   }
 
   return (
@@ -120,6 +134,23 @@ function ModelCard() {
             </div>
           )}
           {msg && <div className={cx("mt-3 border border-line px-3 py-2 text-[12.5px] font-semibold rise", msg.ok ? "bg-green" : "bg-red text-white")}>{msg.text}</div>}
+          {!cfg.mockMode && models.length > 1 && (
+            <div className="mt-5 rounded-[12px] border border-dashed border-line-strong p-4">
+              <div className="flex items-center gap-2"><GitCompare size={16} className="text-accent" /><span className="display text-[15px]">Test two models together</span></div>
+              <p className="mt-1 text-[12.5px] text-ink-2">Runs the whole attack suite against the current model, then against a second one, back to back. Same prompts, same blind judge. Results land on the <Link to="/app/compare" className="underline decoration-2 underline-offset-4">Compare</Link> page.</p>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <span className="mono rounded-[10px] border border-line bg-white/70 px-3 py-2 text-[13px]">{cfg.model}</span>
+                <span className="label text-muted">then</span>
+                <select id="second-model" value={second} onChange={(e) => setSecond(e.target.value)} className="b-input h-10 min-w-[220px] flex-1">
+                  <option value="">pick a second model</option>
+                  {models.filter((m) => m !== cfg.model).map((m) => <option key={m} value={m}>{m}</option>)}
+                </select>
+                <Button variant="primary" onClick={runBoth} disabled={cmpBusy || !second || cfg.runInProgress || !!cfg.compare}><GitCompare size={15} /> {cmpBusy ? "Starting…" : "Run both"}</Button>
+              </div>
+              {cfg.compare && <div className="label mt-2 text-accent">comparison in progress · model {cfg.compare.index + 1} of {cfg.compare.models.length}: {cfg.compare.models[cfg.compare.index]}</div>}
+              {cmpMsg && <div className={cx("mt-3 border border-line px-3 py-2 text-[12.5px] font-semibold rise", cmpMsg.ok ? "bg-green" : "bg-red text-white")}>{cmpMsg.text}</div>}
+            </div>
+          )}
           <div className="mt-4 border-t border-line pt-3">
             <button onClick={() => setShowPrompt((v) => !v)} className="label underline decoration-2 underline-offset-4">{showPrompt ? "Hide" : "Show"} the system prompt the model runs with</button>
             {showPrompt && <pre className="mono mt-2 whitespace-pre-wrap border border-line bg-white p-3 text-[12px] leading-relaxed">{cfg.systemPrompt}</pre>}

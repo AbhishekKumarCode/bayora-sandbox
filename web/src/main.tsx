@@ -12,6 +12,7 @@ import { Live } from "./pages/Live";
 import { Library } from "./pages/Library";
 import { Audit } from "./pages/Audit";
 import { Settings } from "./pages/Settings";
+import { Compare } from "./pages/Compare";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -26,6 +27,7 @@ createRoot(document.getElementById("root")!).render(
             <Route path="live" element={<Live />} />
             <Route path="library" element={<Library />} />
             <Route path="audit" element={<Audit />} />
+            <Route path="compare" element={<Compare />} />
             <Route path="settings" element={<Settings />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
