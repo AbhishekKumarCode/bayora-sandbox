@@ -109,6 +109,11 @@ exactly where the chain breaks.
 
 ## What this does NOT claim to do yet
 
+- Viewer-side secret masking is deliberately fail-closed: any reply with a long run
+  of non-Latin text (or a disguised secret) is withheld from read-only viewers
+  entirely. This over-withholds legitimate Arabic or CJK replies; operators see
+  everything. A real Unicode confusables table would reduce this.
+
 - The public dashboard build carries a read-only `VIEWER_TOKEN`. Anything that
   token can read is treated as public: attack prompts and the system prompt
   are stripped from viewer responses, and the catalog endpoint is operator-only,

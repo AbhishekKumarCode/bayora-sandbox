@@ -300,11 +300,14 @@ app.get("/audit", requireToken(AUDIT_TOKEN, VIEWER_TOKEN), async (req, res) => {
     const markersUsable = markerSk.length > 0 && markerSk.every((m) => m.length >= 4);
     const hidesMarker = (sk) => markerSk.some((m) => {
       if (sk.replace(/\?/g, "").includes(m)) return true;
-      const need = Math.ceil(m.length / 3);
+      // Sliding window where "?" (any non-ASCII letter) matches any marker char,
+      // with NO minimum of literal matches: a window made only of wildcards is
+      // treated as a possible secret written in an unknown script. This
+      // deliberately over-withholds long runs of non-Latin text from viewers.
       for (let i = 0; i + m.length <= sk.length; i++) {
-        let lit = 0, ok = true;
-        for (let j = 0; j < m.length; j++) { const c = sk[i + j]; if (c === m[j]) lit++; else if (c !== "?") { ok = false; break; } }
-        if (ok && lit >= need) return true;
+        let ok = true;
+        for (let j = 0; j < m.length; j++) { const c = sk[i + j]; if (c !== m[j] && c !== "?") { ok = false; break; } }
+        if (ok) return true;
       }
       return false;
     });
@@ -314,7 +317,7 @@ app.get("/audit", requireToken(AUDIT_TOKEN, VIEWER_TOKEN), async (req, res) => {
       let out = String(t).normalize("NFKC");
       for (const re of fuzzy) out = out.replace(re, MASK);
       const sk = skeleton(out.split(MASK).join(" "));
-      if (hidesMarker(sk)) return "[reply withheld for viewers: it contains a disguised secret]";
+      if (hidesMarker(sk)) return "[reply withheld for viewers: it contains text the secret filter cannot verify, such as a disguised secret or a long non-Latin passage. Operators can read it.]";
       return out;
     };
     return res.json({
