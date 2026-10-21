@@ -11,6 +11,8 @@ type Store = {
   brokerOnline: boolean | null; // health probe
   mockMode: boolean;
   modelName: string | null;
+  judgeModel: string | null;   // parsed from the latest verdict note
+  secretMarkers: string[];     // operator only; used to highlight leaks
   entries: AuditEntry[];
   loading: boolean;
   error: string | null;
@@ -35,6 +37,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [brokerOnline, setBrokerOnline] = useState<boolean | null>(null);
   const [mockMode, setMockMode] = useState(false);
   const [modelName, setModelName] = useState<string | null>(null);
+  const [secretMarkers, setSecretMarkers] = useState<string[]>([]);
   const [connected, setConnected] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +48,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     let alive = true;
     healStaleBrokerUrl().finally(() => {
       getHealth().then((h) => { if (alive) { setBrokerOnline(h.ok); setMockMode(h.mockMode); } }).catch(() => alive && setBrokerOnline(false));
+      if (getStoredToken() || VIEWER_TOKEN) getConfig().then((c) => { if (alive) { setModelName(c.mockMode ? null : c.model); setSecretMarkers(c.secretMarkers ?? []); } }).catch(() => {});
     });
     const id = setInterval(() => {
       getHealth().then((h) => { if (alive) { setBrokerOnline(h.ok); setMockMode(h.mockMode); } }).catch(() => alive && setBrokerOnline(false));
@@ -98,7 +102,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     catch { setBrokerOnline(false); }
     // model name is operator-only, so it needs the audit token
     if (getStoredToken() || VIEWER_TOKEN) {
-      try { const c = await getConfig(); setModelName(c.mockMode ? null : c.model); } catch { /* keep last */ }
+      try { const c = await getConfig(); setModelName(c.mockMode ? null : c.model); setSecretMarkers(c.secretMarkers ?? []); } catch { /* keep last */ }
     } else {
       setModelName(null);
     }
@@ -153,10 +157,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const triggerRun = useCallback(async (model?: string) => { guard(); const r = await apiTriggerRun(model); return r.status; }, [guard]);
   const triggerCompare = useCallback(async (models: string[]) => { guard(); const r = await apiTriggerCompare(models); return r.status; }, [guard]);
 
+  const judgeModel = useMemo(() => {
+    for (let i = entries.length - 1; i >= 0; i--) {
+      const e = entries[i];
+      if (e.event === "blue_team_verdict") { const m = /llm judge \(([^)]+)\)/.exec(e.data.notes ?? ""); return m ? m[1] : "keyword classifier"; }
+    }
+    return null;
+  }, [entries]);
+
   const value = useMemo<Store>(() => ({
-    source, role, connected, brokerOnline, mockMode, modelName, entries, loading, error, lastPollAt,
+    source, role, connected, brokerOnline, mockMode, modelName, judgeModel, secretMarkers, entries, loading, error, lastPollAt,
     connect, disconnect, useDemo, verify, triggerRun, triggerCompare, recheckHealth,
-  }), [source, role, connected, brokerOnline, mockMode, modelName, entries, loading, error, lastPollAt, connect, disconnect, useDemo, verify, triggerRun, triggerCompare, recheckHealth]);
+  }), [source, role, connected, brokerOnline, mockMode, modelName, judgeModel, secretMarkers, entries, loading, error, lastPollAt, connect, disconnect, useDemo, verify, triggerRun, triggerCompare, recheckHealth]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

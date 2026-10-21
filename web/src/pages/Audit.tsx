@@ -18,6 +18,7 @@ export function Audit() {
   const s = useStore();
   const { hash } = useLocation();
   const [verify, setVerify] = useState<VerifyResult | null>(null);
+  const [verifiedAt, setVerifiedAt] = useState<Date | null>(null);
   const [busy, setBusy] = useState<"verify" | "tamper" | null>(null);
   const [tamperSeq, setTamperSeq] = useState<number | "">("");
   const [filter, setFilter] = useState<"all" | AuditEntry["event"]>("all");
@@ -35,7 +36,7 @@ export function Audit() {
 
   async function run(kind: "verify" | "tamper") {
     setBusy(kind);
-    try { setVerify(await s.verify(kind === "tamper" ? Number(tamperSeq || s.entries[1]?.seq || 1) : undefined)); }
+    try { setVerify(await s.verify(kind === "tamper" ? Number(tamperSeq || s.entries[1]?.seq || 1) : undefined)); if (kind === "verify") setVerifiedAt(new Date()); }
     finally { setBusy(null); }
   }
   function jump(seq: number) {
@@ -71,8 +72,8 @@ export function Audit() {
                 {verify == null ? "Verify the whole chain" : verify.ok ? `Intact · ${verify.count} entries` : `Broken at entry ${verify.brokenAtSeq}`}
               </div>
               <div className="mt-1 text-[13px] font-semibold text-ink-2">
-                {verify == null && "Recomputes every hash from the first entry with the broker's key."}
-                {verify?.ok && <>Final hash <Hash value={verify.finalHash} /></>}
+                {verify == null && "Recomputes every hash from the first entry with the broker's key. Not verified yet this session."}
+                {verify?.ok && <>Final hash <Hash value={verify.finalHash} />{verifiedAt && <> · verified {verifiedAt.toLocaleTimeString()}</>}</>}
                 {verify && !verify.ok && <>{verify.reason}. Every block after it turns red above.</>}
               </div>
               <div className="mt-3 flex gap-2">
@@ -151,7 +152,7 @@ function ChainVisual({ entries, brokenAt, onJump }: { entries: AuditEntry[]; bro
   const shown = entries.slice(-60); // keep it legible
   const hidden = entries.length - shown.length;
   return (
-    <div className="overflow-x-auto pb-1">
+    <div className="overflow-x-auto pb-1 pt-3">
       <div className="flex min-w-max items-center gap-0">
         {hidden > 0 && <span className="label mr-2 text-muted">+{hidden} earlier</span>}
         {shown.map((e, i) => {
@@ -170,7 +171,7 @@ function ChainVisual({ entries, brokenAt, onJump }: { entries: AuditEntry[]; bro
       </div>
       <div className="label mt-2 flex justify-between text-muted">
         <span>#{shown[0]?.seq ?? 0} oldest</span>
-        <span>red dot above a verdict = got through</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full border border-ink bg-red" /> above a verdict = got through</span>
         <span>#{shown[shown.length - 1]?.seq ?? 0} newest</span>
       </div>
     </div>

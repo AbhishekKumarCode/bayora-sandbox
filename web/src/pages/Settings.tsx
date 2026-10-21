@@ -19,7 +19,7 @@ export function Settings() {
       {s.source === "broker" && s.role === "operator" ? <ModelCard /> : (
         <Tile tone="violet" className="p-5">
           <div className="label text-muted">Model under test</div>
-          <p className="mt-2 text-[13.5px] text-ink-2">{s.source === "broker" ? `Currently under test: ${s.modelName ?? "mock"}. Unlock with the operator token to switch it.` : "Connect a broker to see which model is being attacked and switch it from here."}</p>
+          <p className="mt-2 text-[13.5px] text-ink-2">{s.source === "broker" ? `Currently under test: ${s.modelName ?? (s.mockMode ? "mock" : "…")}. Unlock with the operator token to switch it.` : "Connect a broker to see which model is being attacked and switch it from here."}</p>
           <Button variant="primary" className="mt-4" onClick={() => setOpen(true)}>{s.source === "broker" ? "Unlock controls" : "Connect broker"}</Button>
         </Tile>
       )}
@@ -30,7 +30,7 @@ export function Settings() {
         <div className="mt-2 flex flex-wrap items-center gap-2 text-[13px]">
           Status {s.brokerOnline ? <Pill tone="green" dot>online</Pill> : s.brokerOnline === false ? <Pill tone="red" dot>unreachable</Pill> : <Pill tone="amber">checking</Pill>}
           {s.mockMode && <Pill tone="amber">mock mode</Pill>}
-          <Button size="sm" variant="ghost" onClick={s.recheckHealth}>Re-check</Button>
+          <Button size="sm" onClick={s.recheckHealth}>Re-check</Button>
         </div>
         <div className="mt-2 text-[12.5px] font-semibold text-ink-2">Change the address from the Connect dialog. It is remembered in this browser.</div>
       </Card>
@@ -40,7 +40,7 @@ export function Settings() {
         <div className="display mt-2 text-[20px]">{s.source === "broker" ? "Live broker" : "Not connected"}</div>
         <div className="mt-1 text-[13px] font-semibold text-ink-2">{s.source === "broker" ? "The audit token lives in this tab's session storage only." : "No broker reachable. Nothing to show."}</div>
         <div className="mt-4 flex gap-2">
-          {s.source === "broker" ? <Button onClick={s.disconnect}>Lock controls</Button> : <Button variant="primary" onClick={() => setOpen(true)}>Connect broker</Button>}
+          {s.role === "operator" ? <Button onClick={s.disconnect}>Lock controls</Button> : <Button variant="primary" onClick={() => setOpen(true)}>{s.source === "broker" ? "Unlock controls" : "Connect broker"}</Button>}
         </div>
       </Card>
 

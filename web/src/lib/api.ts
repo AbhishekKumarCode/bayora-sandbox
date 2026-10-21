@@ -62,6 +62,7 @@ export type AuditEntry = {
     responsePreview?: string;
     response?: string;
     model?: string;
+    secretsMasked?: boolean;
     mock?: boolean;
     verdict?: Verdict;
     confidence?: number;
@@ -112,7 +113,7 @@ export async function triggerRun(model?: string): Promise<{ status: string }> {
   return json;
 }
 
-export type BrokerConfig = { provider: string; model: string; baseUrl: string | null; mockMode: boolean; systemPrompt: string; runInProgress: boolean; compare?: { models: string[]; index: number; startedAt: number } | null; role?: "operator" | "viewer" };
+export type BrokerConfig = { provider: string; model: string; baseUrl: string | null; mockMode: boolean; systemPrompt: string | null; secretMarkers?: string[]; runInProgress: boolean; compare?: { models: string[]; index: number; startedAt: number } | null; role?: "operator" | "viewer" };
 export type CatalogAttack = { technique: string; prompt: string };
 
 async function auditGet<T>(path: string): Promise<T> {

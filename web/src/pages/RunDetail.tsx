@@ -30,7 +30,7 @@ export function RunDetail() {
         <Link to="/app/runs" className="label inline-flex items-center gap-1 underline decoration-2 underline-offset-4"><ArrowLeft size={14} /> All runs</Link>
         <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="display text-[34px] sm:text-[44px]">Run {run.index}: <span className={cx("px-1", run.passed ? "bg-red text-white" : "bg-green")}>{run.passed ? `${run.passed} of ${run.attacks.length} got through` : `all ${run.attacks.length} blocked`}</span></h1>
+            <h1 className="display text-[34px] sm:text-[44px]">Run {run.index}: <span className={cx(run.passed ? "text-red-2" : "text-green-2")}>{run.passed ? `${run.passed} of ${run.attacks.length} got through` : `all ${run.attacks.length} blocked`}</span></h1>
             <p className="mt-2 flex flex-wrap items-center gap-2 text-[14px] font-semibold text-ink-2">{fmtDate(run.startedAt)}, {fmtTime(run.startedAt)} · took {fmtDuration(run.startedAt, run.endedAt)} · {run.blocked} blocked, {run.ambiguous} unsure{run.pending ? `, ${run.pending} judging` : ""} {run.live ? <Pill tone="red" dot>live</Pill> : <Pill tone="green">sealed</Pill>}</p>
           </div>
           <div className="flex gap-3"><Button onClick={exportJson}><Download size={15} strokeWidth={2.5} /> Export</Button><Button variant="primary" onClick={doVerify} disabled={busy}>{busy ? "Checking…" : "Verify record"}</Button></div>

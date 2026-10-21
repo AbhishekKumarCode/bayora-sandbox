@@ -9,11 +9,11 @@ import { ConnectDialog } from "./ConnectDialog";
 
 const NAV = [
   { to: "/app", label: "Overview", icon: LayoutGrid, end: true },
-  { to: "/app/runs", label: "Runs", icon: ListChecks },
   { to: "/app/live", label: "Live run", icon: Radio },
-  { to: "/app/compare", label: "Compare models", icon: GitCompare },
-  { to: "/app/library", label: "Attack library", icon: Library },
   { to: "/app/audit", label: "Audit chain", icon: Link2 },
+  { to: "/app/runs", label: "Runs", icon: ListChecks },
+  { to: "/app/library", label: "Attack library", icon: Library },
+  { to: "/app/compare", label: "Compare models", icon: GitCompare },
 ];
 
 export function Shell() {
@@ -50,11 +50,13 @@ export function Shell() {
         <div className="display text-[15px]">{s.source === "broker" ? (s.role === "operator" ? "Live · operator" : "Live · read-only") : "Not connected"}</div>
         {s.mockMode && s.source === "broker" && <Pill tone="amber" className="ml-auto">mock</Pill>}
       </div>
-      <div className="mt-3">
-        {s.role === "operator"
-          ? <Button size="sm" className="w-full" onClick={s.disconnect}>Lock controls</Button>
-          : <Button size="sm" variant="primary" className="w-full" onClick={() => setConnectOpen(true)}>{s.source === "broker" ? "Unlock controls" : "Connect broker"}</Button>}
-      </div>
+      {(s.modelName || s.judgeModel) && (
+        <div className="mt-2 space-y-0.5 text-[12px] text-ink-2">
+          {s.modelName && <div>Testing <span className="mono font-semibold text-ink">{s.modelName}</span></div>}
+          {s.judgeModel && <div>Judge <span className="mono font-semibold text-ink">{s.judgeModel}</span></div>}
+        </div>
+      )}
+      {s.source !== "broker" && <div className="mt-3"><Button size="sm" variant="primary" className="w-full" onClick={() => setConnectOpen(true)}>Connect broker</Button></div>}
     </div>
   );
 
@@ -83,6 +85,7 @@ export function Shell() {
               <Link to="/" className="flex items-center gap-2 lg:hidden"><Logo /><span className="display text-[16px]">Bayora</span></Link>
               <div className="hidden items-center gap-2 lg:flex">
                 <span className="label">Sandbox</span><span className="label opacity-50">/</span><span className="display text-[15px]">{pageTitle}</span>
+                {s.modelName && <span className="ml-3 hidden rounded-full border border-line bg-white/60 px-2.5 py-0.5 text-[12px] text-ink-2 xl:inline">testing <span className="mono font-semibold text-ink">{s.modelName}</span>{s.judgeModel && <> · judge <span className="mono font-semibold text-ink">{s.judgeModel}</span></>}</span>}
               </div>
               <div className="ml-auto flex items-center gap-2">
                 {live && <Pill tone="red" dot className="hidden sm:inline-flex">run in progress</Pill>}
@@ -95,7 +98,7 @@ export function Shell() {
                     ? <button onClick={s.disconnect} className="b-pill ink cursor-pointer">lock</button>
                     : <button onClick={() => setConnectOpen(true)} className="b-pill ink cursor-pointer">unlock</button>}
                 </div>
-                <Button size="sm" to="/app/live" className="hidden sm:inline-flex"><Radio size={14} strokeWidth={2.5} /> Live</Button>
+                
                 <button onClick={() => setOpen(true)} aria-label="Open menu" className="border border-line bg-card p-1.5 lg:hidden"><Menu size={18} strokeWidth={2.5} /></button>
               </div>
             </div>

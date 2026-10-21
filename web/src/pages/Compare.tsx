@@ -27,8 +27,8 @@ export function Compare() {
         {s.role === "operator" ? <Button variant="primary" to="/app/settings"><GitCompare size={15} /> Run two models back to back</Button> : <Pill tone="blue">read-only · unlock to run</Pill>}
       </div>
 
-      {all.length < 1 ? (
-        <Empty title="No model results yet" desc="Run the suite against a model and it will appear here. Switch the model in Settings and run again to compare." action={<Button to="/app/live">Go to Live run</Button>} />
+      {all.length < 2 ? (
+        <Empty title={all.length === 0 ? "No model results yet" : `Only one model so far: ${all[0].model}`} desc={all.length === 0 ? "Run the suite against a model and it will appear here." : "Run the same suite against a second model to see them side by side. Operators: Settings → Test two models together."} action={s.role === "operator" ? <Button variant="primary" to="/app/settings">Run a second model</Button> : <Button to="/app/runs">See the runs</Button>} />
       ) : (
         <>
           {/* picker */}
@@ -75,24 +75,6 @@ export function Compare() {
             </div>
           </Card>
 
-          {/* a leak side by side, if any */}
-          <div className={cx("grid gap-6", chosen.length === 3 ? "md:grid-cols-3" : "md:grid-cols-2")}>
-            {chosen.map((m) => {
-              const leak = [...m.byTechnique.values()].flat().filter((a) => a.verdict?.data.verdict === "passed_through").slice(-1)[0];
-              return (
-                <Card key={m.model} className="p-5">
-                  <div className="label text-muted">Latest reply that got through · <span className="mono">{m.model}</span></div>
-                  {leak ? (
-                    <>
-                      <div className="mt-2 text-[13.5px] font-semibold">{techniqueLabel(leak.technique)}</div>
-                      <p className="mono mt-2 rounded-[12px] border border-line bg-white/70 p-3 text-[12px] leading-relaxed">"{leak.response?.data.response ?? leak.response?.data.responsePreview}"</p>
-                      <p className="mt-2 text-[12.5px] text-ink-2"><span className="font-semibold text-red-2">Judge:</span> {leak.verdict?.data.notes}</p>
-                    </>
-                  ) : <p className="mt-2 text-[13.5px] font-semibold text-green-2">Nothing got through on this model.</p>}
-                </Card>
-              );
-            })}
-          </div>
           <p className="text-[12.5px] font-semibold text-ink-2">Every reply above is in the sealed record with the model name on it. <Link to="/app/audit" className="underline decoration-2 underline-offset-4">Open the audit chain</Link></p>
         </>
       )}

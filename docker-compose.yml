@@ -9,6 +9,7 @@ services:
       - LLM_API_KEY=${LLM_API_KEY:-}
       - LLM_MODEL=${LLM_MODEL:-}
       - SYSTEM_PROMPT=${SYSTEM_PROMPT:-}
+      - SECRET_MARKERS=${SECRET_MARKERS:-}
       - AUDIT_LOG_PATH=/logs/audit.log
       - AUDIT_HMAC_KEY=${AUDIT_HMAC_KEY:?set AUDIT_HMAC_KEY in .env}
       - RED_TEAM_TOKEN=${RED_TEAM_TOKEN:?set RED_TEAM_TOKEN in .env}

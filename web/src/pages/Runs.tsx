@@ -25,7 +25,7 @@ export function Runs() {
 
       {runs.length === 0 ? <Empty title="No runs recorded" desc="Start a run from the Live page, or connect a broker that already has an audit log." /> : (
         <>
-          <Card className="p-5"><Heading title="Blocked rate over time" desc="Oldest on the left." /><TrendArea points={trend.map((r) => r.catchRate)} labels={trend.map((r) => `Run ${r.index}`)} height={130} /></Card>
+          {runs.length >= 2 && <Card className="p-5"><Heading title="Blocked rate over time" desc="Oldest on the left." /><TrendArea points={trend.map((r) => r.catchRate)} labels={trend.map((r) => `Run ${r.index}`)} height={130} /></Card>}
           <div className="grid gap-7 md:grid-cols-2 xl:grid-cols-3">
             {runs.map((r) => {
               const worst = r.attacks.filter((a) => a.verdict?.data.verdict === "passed_through").map((a) => techniqueLabel(a.technique));

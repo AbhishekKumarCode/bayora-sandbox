@@ -109,7 +109,7 @@ export function Library() {
                   <div className="display truncate text-[15px]">{techniqueLabel(t.id)}</div>
                   <div className="label truncate text-muted">{t.family} · {st ? `${st.total} fired` : "not fired yet"}</div>
                 </div>
-                {pct != null ? <Gauge pct={pct} /> : <Pill tone={t.severity === "high" ? "red" : t.severity === "medium" ? "amber" : "blue"}>{t.severity}</Pill>}
+                {pct != null ? <Pill tone={pct >= 70 ? "green" : pct >= 40 ? "amber" : "red"}>{pct}% blocked</Pill> : <Pill tone={t.severity === "high" ? "red" : t.severity === "medium" ? "amber" : "blue"}>{t.severity}</Pill>}
               </button>
             );
           })}

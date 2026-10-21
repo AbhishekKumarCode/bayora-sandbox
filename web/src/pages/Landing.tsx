@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, ShieldCheck, Lock, EyeOff, Network, Menu, X, Code2, Plus, Minus } from "lucide-react";
-import { Button, Actor, Pill, Stamp, Tile, cx } from "@/components/ui";
+import { Button, Actor, Stamp, Tile, cx } from "@/components/ui";
 import { Logo } from "@/components/Shell";
 import { AuditTape } from "@/components/AuditTape";
 import { IsoSandbox, StageSteps } from "@/components/IsoSandbox";
@@ -53,7 +53,7 @@ export function Landing() {
         <div className="grid-dots absolute inset-0" aria-hidden />
         <div className="relative mx-auto grid max-w-[1240px] items-center gap-10 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-12">
           <div className="lg:col-span-6">
-            <div className="flex flex-wrap items-center gap-2"><Pill tone="yellow">Track 04</Pill><span className="label text-muted">Securing adversarial AI safety testing</span></div>
+            <div className="flex flex-wrap items-center gap-2"><span className="label text-muted">Adversarial AI safety testing you can audit</span></div>
             <h1 className="display mt-6 text-[48px] sm:text-[72px]" style={{ textWrap: "balance" }}>Is your AI actually safe?<br /><span className="text-accent">Or does it just say so.</span></h1>
             <p className="mt-7 max-w-[520px] text-[17px] font-semibold leading-relaxed text-ink-2">A red room attacks the model. A blue room judges every reply without ever seeing the attack. Each verdict is sealed into a keyed hash chain you can verify yourself. When something gets through, it stays on the record.</p>
             <div className="mt-8 flex flex-wrap gap-4">
@@ -61,7 +61,7 @@ export function Landing() {
               <Button size="lg" to="/app/live">Watch a live run</Button>
             </div>
             <div className="mt-10 grid max-w-[560px] grid-cols-3 gap-3">
-              {[[EyeOff, "Blind judge", "never sees the prompt", "blue"], [Network, "No bridge", "rooms share no network", "red"], [Lock, "Keyed chain", "HMAC-SHA256, one key", "green"]].map(([I, t, d, tone]) => {
+              {[[EyeOff, "Blind judge", "never sees the prompt", "blue"], [Network, "No bridge", "rooms share no network", "red"], [Lock, "Signed record", "every entry chained", "green"]].map(([I, t, d, tone]) => {
                 const Icon = I as typeof EyeOff;
                 return <Tile key={t as string} tone={tone as "blue"} depth={6} className="p-3"><Icon size={16} strokeWidth={2.5} /><div className="display mt-2 text-[14px]">{t as string}</div><div className="label mt-0.5 text-muted">{d as string}</div></Tile>;
               })}
@@ -211,7 +211,7 @@ function ChainDemo() {
   const rows = ["attack fired", "model replied", "blind verdict", "attack fired", "model replied"];
   return (
     <Tile tone="ink" depth={12} className="p-5">
-      <div className="flex items-center justify-between"><span className="label">Audit chain</span><button onClick={() => setTampered((t) => !t)} className={cx("b-btn h-9 px-3 text-[12px]", tampered ? "danger" : "")}>{tampered ? "Restore" : "Tamper entry 3"}</button></div>
+      <div className="flex items-center justify-between"><span className="label">Audit chain · <Link to="/app/audit" className="underline decoration-2 underline-offset-4">try it on the real record</Link></span><button onClick={() => setTampered((t) => !t)} className={cx("b-btn h-9 px-3 text-[12px]", tampered ? "danger" : "")}>{tampered ? "Restore" : "Tamper entry 3"}</button></div>
       <div className="mt-4 space-y-3">
         {rows.map((r, i) => { const n = i + 1; const broken = tampered && n >= 3; return (
           <div key={n} className={cx("flex items-center gap-3 border border-line px-3 py-2 text-[12.5px] font-bold", broken ? "bg-red text-white" : "bg-white")}>

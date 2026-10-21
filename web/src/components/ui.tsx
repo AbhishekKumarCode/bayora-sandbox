@@ -98,3 +98,26 @@ export function Stat(props: { label: string; value: ReactNode; sub?: ReactNode; 
     </Tile>
   );
 }
+
+/** Renders text with secret markers highlighted (operator) or the server's mask rendered as a chip (viewer). */
+export function Leak({ text, markers, className }: { text: string; markers: string[]; className?: string }) {
+  const MASK = "[secret · hidden for viewers]";
+  const parts: Array<{ t: string; kind: "plain" | "secret" | "mask" }> = [];
+  const pattern = [MASK, ...markers].filter(Boolean).map((m) => m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  if (!pattern) return <span className={className}>{text}</span>;
+  const re = new RegExp(`(${pattern})`, "gi");
+  let last = 0; let m: RegExpExecArray | null;
+  while ((m = re.exec(text))) {
+    if (m.index > last) parts.push({ t: text.slice(last, m.index), kind: "plain" });
+    parts.push({ t: m[0], kind: m[0] === MASK ? "mask" : "secret" });
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) parts.push({ t: text.slice(last), kind: "plain" });
+  return (
+    <span className={className}>
+      {parts.map((p, i) => p.kind === "plain" ? <span key={i}>{p.t}</span>
+        : p.kind === "secret" ? <mark key={i} className="rounded-[4px] bg-red/40 px-1 font-bold text-red-2" title="This string comes from the system prompt. It should never appear in a reply.">{p.t}</mark>
+        : <span key={i} className="rounded-[4px] bg-ink/80 px-1.5 text-[11px] font-semibold text-white" title="The model leaked a secret here. Operators see it; visitors do not.">secret leaked · hidden</span>)}
+    </span>
+  );
+}

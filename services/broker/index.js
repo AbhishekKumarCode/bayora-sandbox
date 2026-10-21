@@ -2,7 +2,7 @@ import express from "express";
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { appendEntry, readAllEntries, verifyChain } from "./audit.js";
-import { complete, isMockMode, llmInfo, llmDetails, setModel, listModels, SYSTEM_PROMPT } from "./llm.js";
+import { complete, isMockMode, llmInfo, llmDetails, setModel, listModels, SYSTEM_PROMPT, SECRET_MARKERS } from "./llm.js";
 
 const RED_TEAM_TOKEN = process.env.RED_TEAM_TOKEN;
 const BLUE_TEAM_TOKEN = process.env.BLUE_TEAM_TOKEN;
@@ -212,7 +212,7 @@ app.get("/attacks", requireToken(AUDIT_TOKEN), async (req, res) => {
 app.get("/config", requireToken(AUDIT_TOKEN, VIEWER_TOKEN), (req, res) => {
   const d = llmDetails();
   if (req.role === "viewer") return res.json({ provider: d.provider, model: d.model, baseUrl: null, mockMode: isMockMode(), systemPrompt: null, runInProgress, compare: compareState, role: "viewer" });
-  res.json({ ...d, mockMode: isMockMode(), systemPrompt: SYSTEM_PROMPT, runInProgress, compare: compareState, role: req.role });
+  res.json({ ...d, mockMode: isMockMode(), systemPrompt: SYSTEM_PROMPT, secretMarkers: SECRET_MARKERS, runInProgress, compare: compareState, role: req.role });
 });
 
 app.get("/models", requireToken(AUDIT_TOKEN, VIEWER_TOKEN), async (req, res) => {
@@ -271,8 +271,20 @@ app.get("/audit", requireToken(AUDIT_TOKEN, VIEWER_TOKEN), async (req, res) => {
   const entries = await readAllEntries();
   if (req.role === "viewer") {
     // The viewer token lives in the public web build. Strip prompts so that
-    // nothing reachable with it could hand the judge the attack text.
-    return res.json({ count: entries.length, redacted: true, entries: entries.map((e) => e.event === "attack_submitted" ? { ...e, data: { ...e.data, prompt: undefined, promptRedacted: true } } : e) });
+    // nothing reachable with it could hand the judge the attack text, and
+    // mask the leaked secrets themselves so the record does not re-leak them.
+    const mask = (t) => SECRET_MARKERS.reduce((acc, m) => (m ? acc.split(m).join("[secret · hidden for viewers]") : acc), String(t ?? ""));
+    const maskCI = (t) => SECRET_MARKERS.reduce((acc, m) => (m ? acc.replace(new RegExp(m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"), "[secret · hidden for viewers]") : acc), String(t ?? ""));
+    return res.json({
+      count: entries.length, redacted: true,
+      entries: entries.map((e) => {
+        if (e.event === "attack_submitted") return { ...e, data: { ...e.data, prompt: undefined, promptRedacted: true } };
+        if (e.event === "llm_response_received") return { ...e, data: { ...e.data, response: e.data.response != null ? maskCI(e.data.response) : undefined, responsePreview: maskCI(e.data.responsePreview), secretsMasked: true } };
+        if (e.event === "blue_team_verdict") return { ...e, data: { ...e.data, notes: maskCI(e.data.notes) } };
+        return e;
+      }),
+    });
+    void mask;
   }
   res.json({ count: entries.length, entries });
 });
