@@ -140,6 +140,9 @@ function startRun() {
 
 app.post("/trigger-run", requireToken(AUDIT_TOKEN, VIEWER_TOKEN), async (req, res) => {
   if (req.role === "viewer" && !VIEWER_CAN_RUN) return res.status(403).json({ error: "visitors cannot start runs on this broker" });
+  if (compareState) {
+    return res.status(409).json({ error: "a model comparison is in progress; try again when it finishes" });
+  }
   if (runInProgress) {
     return res.status(409).json({ error: "a run is already in progress" });
   }
@@ -198,6 +201,9 @@ app.post("/trigger-compare", requireToken(AUDIT_TOKEN), async (req, res) => {
     try {
       for (let i = 0; i < models.length; i++) {
         compareState.index = i;
+        // never start on top of a run that is still going
+        const idleBy = Date.now() + 5 * 60 * 1000;
+        while (runInProgress && Date.now() < idleBy) await new Promise((r) => setTimeout(r, 500));
         setModel(models[i]);
         startRun();
         fallbackIfUnclaimed();
