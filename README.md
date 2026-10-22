@@ -12,6 +12,19 @@ AdvBench/JailbreakBench sourcing) gets added.
 
 **Docs:** [Product Requirements](docs/PRD.md) · [Architecture](docs/ARCHITECTURE.md) · [API Reference](docs/API.md) · [Threat Model](docs/THREAT_MODEL.md) · [Design System](docs/DESIGN_SYSTEM.md)
 
+## Try it (for judges)
+
+Open **https://bayora-sandbox.vercel.app**. No login, no token.
+
+1. **Overview** shows what the last run found and which models are involved.
+2. **Live run** → *Start a run* sends seven attacks through the sandbox while you watch; each one appears as a card.
+3. **Audit chain** → *Verify chain*, then *Try to tamper* to see a single edited entry break everything after it.
+4. **Compare models** puts two models side by side on the same attacks and the same blind judge.
+
+The address ending in `trycloudflare.com` is the **broker**, the API behind the dashboard, and it
+has no page of its own. If you open it in a browser you are redirected to the dashboard.
+The broker runs on the team's machine; if the dashboard says it is unreachable, it retries on its own.
+
 ## What's actually isolated here
 
 - `red-team` is only on `red-net`. `blue-team` is only on `blue-net`. They

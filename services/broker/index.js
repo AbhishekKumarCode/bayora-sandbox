@@ -67,6 +67,14 @@ const issuedToBlueTeam = new Set(); // attackIds blue-team has actually been han
 const KNOWN_VERDICTS = new Set(["blocked", "passed_through", "ambiguous"]);
 const TECHNIQUE_PATTERN = /^[a-z0-9_]{1,64}$/; // matches the labels in red-team/attacks.json
 
+// The broker is an API, not a website. A person who opens its address in a
+// browser is sent to the dashboard; tools get a small JSON description.
+const DASHBOARD_URL = (process.env.DASHBOARD_URL || "https://bayora-sandbox.vercel.app").replace(/\/+$/, "");
+app.get("/", (req, res) => {
+  if (req.accepts(["json", "html"]) === "html") return res.redirect(302, DASHBOARD_URL + "/");
+  res.json({ service: "bayora-broker", note: "This is the API behind Bayora Sandbox, not a website.", dashboard: DASHBOARD_URL, health: "/health" });
+});
+
 app.get("/health", (req, res) => {
   res.json({ ok: true, mockMode: isMockMode(), ...llmInfo(), viewer: Boolean(VIEWER_TOKEN) });
 });
@@ -375,6 +383,11 @@ app.get("/verify", requireToken(AUDIT_TOKEN, VIEWER_TOKEN), async (req, res) => 
   const simulateTamperSeq = req.query.simulateTamperSeq ? Number(req.query.simulateTamperSeq) : undefined;
   const result = await verifyChain(simulateTamperSeq);
   res.json(result);
+});
+
+app.use((req, res) => {
+  if (req.accepts(["json", "html"]) === "html" && req.method === "GET") return res.redirect(302, DASHBOARD_URL + "/");
+  res.status(404).json({ error: "not found", dashboard: DASHBOARD_URL });
 });
 
 app.listen(PORT, () => {

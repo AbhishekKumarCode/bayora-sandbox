@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { NavLink, Outlet, Link, useLocation } from "react-router-dom";
-import { LayoutGrid, ListChecks, Radio, Library, Link2, Settings2, Menu, X, Plug, Database, GitCompare } from "lucide-react";
+import { LayoutGrid, ListChecks, Radio, Library, Link2, Settings2, Menu, X, Plug, Database, GitCompare, RefreshCw, WifiOff } from "lucide-react";
 import { useStore, useNow } from "@/lib/store";
 import { isLive } from "@/lib/model";
-import { Button, Pill, cx } from "./ui";
+import { Button, Card, Pill, cx } from "./ui";
 import { getBrokerUrl } from "@/lib/api";
 import { ConnectDialog } from "./ConnectDialog";
 
@@ -26,6 +26,11 @@ export function Shell() {
   const current = NAV.find((n) => (n.end ? pathname === n.to : pathname.startsWith(n.to)));
   const pageTitle = pathname.match(/^\/app\/runs\/[^/]+/) ? "Run detail" : pathname.startsWith("/app/settings") ? "Settings" : current?.label ?? "Dashboard";
   const sinceLastPoll = s.lastPollAt ? Math.round((now - s.lastPollAt) / 1000) : null;
+  // Before the first answer from the broker, never show an empty record as if it were real.
+  // Settings stays reachable so the broker address can be changed.
+  const gate: "ready" | "loading" | "unreachable" =
+    s.source !== "broker" || s.lastPollAt > 0 || pathname.startsWith("/app/settings") ? "ready"
+    : s.brokerOnline === false || s.error ? "unreachable" : "loading";
 
   const nav = (
     <nav className="flex flex-col gap-2">
@@ -105,7 +110,7 @@ export function Shell() {
           </header>
 
           <main className="mx-auto w-full max-w-[1240px] flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-            <Outlet />
+            {gate === "ready" ? <Outlet /> : <BrokerGate state={gate} onRetry={s.recheckHealth} error={s.error} url={getBrokerUrl()} />}
           </main>
         </div>
       </div>
@@ -136,5 +141,33 @@ export function Logo({ size = 30 }: { size?: number }) {
         <path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z" /><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5" />
       </svg>
     </span>
+  );
+}
+
+
+function BrokerGate({ state, onRetry, error, url }: { state: "loading" | "unreachable"; onRetry: () => Promise<void>; error: string | null; url: string }) {
+  const [busy, setBusy] = useState(false);
+  if (state === "loading") {
+    return (
+      <div className="mx-auto max-w-[720px] space-y-4 pt-8" role="status" aria-live="polite">
+        <div className="flex items-center gap-3 text-[15px] font-semibold text-ink-2"><RefreshCw size={16} className="animate-spin" /> Loading the sealed record…</div>
+        <div className="skeleton h-12 w-3/4" /><div className="skeleton h-5 w-1/2" />
+        <div className="grid gap-4 sm:grid-cols-3"><div className="skeleton h-28" /><div className="skeleton h-28" /><div className="skeleton h-28" /></div>
+      </div>
+    );
+  }
+  return (
+    <Card className="mx-auto mt-8 max-w-[720px] p-8 text-center">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-[14px] bg-amber/50 text-amber-2"><WifiOff size={22} /></div>
+      <h1 className="display mt-4 text-[26px]">The broker isn't reachable right now</h1>
+      <p className="mx-auto mt-2 max-w-[520px] text-[14.5px] text-ink-2">This dashboard reads the sealed record from a broker that runs on the team's own machine, so it can be offline for a few minutes (a restart, a network change). The record itself is safe on disk. This page keeps retrying by itself.</p>
+      {error && <p className="mono mx-auto mt-3 max-w-[560px] break-words text-[12px] text-muted">{error}</p>}
+      <div className="mt-5 flex flex-wrap justify-center gap-3">
+        <Button variant="primary" onClick={async () => { setBusy(true); try { await onRetry(); } finally { setBusy(false); } }} disabled={busy}><RefreshCw size={15} className={busy ? "animate-spin" : ""} /> {busy ? "Checking…" : "Try again"}</Button>
+        <Button to="/">How it works</Button>
+        <Button variant="ghost" to="/app/settings">Change broker address</Button>
+      </div>
+      <p className="mono mt-4 text-[11.5px] text-muted">trying {url}</p>
+    </Card>
   );
 }

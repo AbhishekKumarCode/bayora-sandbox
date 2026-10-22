@@ -117,7 +117,7 @@ body {
 @keyframes rise { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 .rise { animation: rise .2s ease-out both; }
 .blink, .marquee, .stamp-in, .flow-line { animation: none; }
-.skeleton { background: rgb(255 255 255 / 0.5); border-radius: 10px; }
+.skeleton { background: rgb(31 36 48 / 0.07); border-radius: 12px; }
 .tape { background: #1f2430; color: #d9dce6; border-radius: 18px; box-shadow: 0 20px 40px -24px rgb(31 36 48 / 0.5); }
 .tape-line { display: grid; grid-template-columns: 34px 92px 1fr auto; gap: 12px; align-items: baseline; padding: 6px 0; border-bottom: 1px solid rgb(255 255 255 / .08); }
 .caret::after { content: "▍"; color: #8a93ad; }
