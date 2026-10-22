@@ -28,4 +28,3 @@ dist-ssr
 .env*
 
 # public, read-only viewer config; safe to commit
-!.env.production
