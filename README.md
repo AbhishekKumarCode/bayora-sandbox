@@ -105,9 +105,22 @@ is editable in the same dialog (default: `VITE_BROKER_URL` at build time).
 ## Deploying the dashboard
 
 The root `vercel.json` builds `web/` and serves `web/dist` with an SPA rewrite.
-Leave the Vercel project's Root Directory **unset** (repo root). Set
-`VITE_BROKER_URL` in the Vercel environment to a stable broker address (a named
-Cloudflare tunnel, not a quick tunnel, whose hostname changes on every restart).
+Leave the Vercel project's Root Directory **unset** (repo root).
+
+The dashboard learns where the broker is from `VITE_BROKER_URL` at build time. With a
+free Cloudflare quick tunnel the broker's public hostname changes whenever `cloudflared`
+restarts, so a small service keeps this in sync by itself:
+
+```bash
+sudo scripts/install-tunnel-service.sh     # once; starts on boot, restarts on failure
+journalctl -u bayora-tunnel -f             # watch it
+```
+
+`scripts/tunnel-watch.sh` runs the tunnel; when the hostname changes it sets
+`VITE_BROKER_URL` in the Vercel project and redeploys (about 30 seconds). It needs an
+authenticated `vercel` CLI and the project linked in `.vercel/`. With a named Cloudflare
+tunnel on your own domain the address never changes and the service is not needed.
+For a one-off tunnel without the service, use `scripts/tunnel.sh`.
 
 ## Checking the broker is reachable
 
