@@ -38,7 +38,7 @@ export function Settings() {
       <Card className="p-5">
         <div className="label text-muted">Data source</div>
         <div className="display mt-2 text-[20px]">{s.source === "broker" ? "Live broker" : "Not connected"}</div>
-        <div className="mt-1 text-[13px] font-semibold text-ink-2">{s.source === "broker" ? "The audit token lives in this tab's session storage only." : "No broker reachable. Nothing to show."}</div>
+        <div className="mt-1 text-[13px] font-semibold text-ink-2">{s.source === "broker" ? (s.role === "operator" ? "Your operator token is stored in this browser (or only this tab, if you unticked \"Stay signed in\"). Sign out removes it. It is never sent anywhere except the broker." : "Visitors use a read-only token and store nothing secret.") : "No broker reachable. Nothing to show."}</div>
         <div className="mt-4 flex gap-2">
           {s.role === "operator" ? <Button onClick={s.disconnect}>Sign out</Button> : s.source !== "broker" ? <Button variant="primary" onClick={() => setOpen(true)}>Connect broker</Button> : <span className="text-[13px] text-muted">Visitor session. Sign in from the model card above.</span>}
         </div>

@@ -86,12 +86,11 @@ docker exec bayora-red-team wget -T 3 -O /dev/null http://blue-team:4000   # bad
 
 ## Live dashboard
 
-The dashboard lives in `web/` — a Vite + React + Tailwind app with a landing
-page at `/` and the app at `/app`: Overview, Runs, Run detail, Live run, Attack
-library, Audit chain, Settings. Every number is computed from the broker's
-`/audit` data. Until you connect a broker it shows built-in **demo data**,
-labelled as such everywhere, and its Verify button in demo mode is a
-placeholder, not a real recompute.
+The dashboard lives in `web/`: a Vite + React + Tailwind app with a landing
+page at `/` and the app at `/app` (Overview, Live run, Audit chain, Runs, Run detail,
+Attack library, Compare models, Settings). Every number is computed from the broker's
+`/audit` data. There is no built-in sample data: if the broker is unreachable the
+dashboard says so and retries, and an empty record shows an empty state.
 
 ```bash
 cd web
@@ -100,7 +99,7 @@ npm run dev          # http://localhost:5173
 ```
 
 Open `/app`. Visitors need nothing: they can read the record, verify it, and start a rate-limited run of the current model. Click **operator login** in the header, and paste the `AUDIT_TOKEN`. Like an API key, the broker shows it once: open `http://localhost:4000/setup` on the broker's machine and copy it (the page then refuses to show it again; it also refuses requests that came through the tunnel). Delete `logs/.token-revealed` to see it once more. It is also in
-the root `.env`. The token stays in that tab's session storage. The broker URL
+the root `.env`. By default the token is kept in this browser ("Stay signed in on this device"); untick it to keep it for the tab only, and use *sign out* to forget it. The broker URL
 is editable in the same dialog (default: `VITE_BROKER_URL` at build time).
 
 ## Deploying the dashboard
@@ -153,7 +152,7 @@ exactly where the chain breaks.
   leaves that attack unjudged.
 - The "Start a run" button has the broker fire its own copy of `attacks.json`;
   only the red container's boot run crosses the real network boundary.
-- No seccomp profiles, no rate limiting on the broker, no tests yet.
+- No seccomp profiles and no automated test suite; `scripts/smoke.sh` checks the broker end to end. Rate limiting exists only for visitor-started runs.
 
 ## Project structure
 
