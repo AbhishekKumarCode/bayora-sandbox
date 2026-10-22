@@ -91,7 +91,12 @@ const page = (body) => `<!doctype html><meta charset="utf-8"><meta name="viewpor
 app.get("/setup", async (req, res) => {
   res.set({ "Cache-Control": "no-store", "X-Robots-Tag": "noindex" });
   const host = (req.headers.host || "").toLowerCase().replace(/:\d+$/, "");
-  if (!["localhost", "127.0.0.1", "[::1]"].includes(host) || req.header("x-forwarded-for") || req.header("cf-connecting-ip") || req.header("x-forwarded-host") || req.header("via")) {
+  // The socket peer must be loopback or a Docker network gateway (.1): that is how a request
+  // from the host machine arrives. The red and blue containers get other addresses, so they
+  // cannot pass even if they forge a localhost Host header.
+  const peer = (req.socket.remoteAddress || "").replace(/^::ffff:/, "");
+  const fromHost = peer === "127.0.0.1" || peer === "::1" || /^\d+\.\d+\.\d+\.1$/.test(peer);
+  if (!fromHost || !["localhost", "127.0.0.1", "[::1]"].includes(host) || req.header("x-forwarded-for") || req.header("cf-connecting-ip") || req.header("x-forwarded-host") || req.header("via")) {
     return res.status(404).send(page("<h2>Not found</h2><p>The operator token can only be revealed on the machine running the broker.</p>"));
   }
   // 'wx' creates the marker atomically: only one request can ever win it.
