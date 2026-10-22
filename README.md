@@ -110,6 +110,16 @@ Leave the Vercel project's Root Directory **unset** (repo root). Set
 `VITE_BROKER_URL` in the Vercel environment to a stable broker address (a named
 Cloudflare tunnel, not a quick tunnel, whose hostname changes on every restart).
 
+## Checking the broker is reachable
+
+```bash
+scripts/smoke.sh                       # against the local broker
+scripts/smoke.sh https://<tunnel>      # through the public tunnel, as a browser would
+```
+
+It checks health, the CORS preflight a browser sends before every authenticated call, what each
+token may and may not do, that visitor responses carry no attack prompts, and that the chain verifies.
+
 ## Verifying the audit log from the command line
 
 ```bash
