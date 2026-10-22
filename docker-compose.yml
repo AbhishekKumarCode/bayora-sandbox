@@ -15,7 +15,11 @@ services:
       - RED_TEAM_TOKEN=${RED_TEAM_TOKEN:?set RED_TEAM_TOKEN in .env}
       - BLUE_TEAM_TOKEN=${BLUE_TEAM_TOKEN:?set BLUE_TEAM_TOKEN in .env}
       - AUDIT_TOKEN=${AUDIT_TOKEN:?set AUDIT_TOKEN in .env}
-      - VIEWER_TOKEN=${VIEWER_TOKEN:-} # optional read-only role for public viewers
+      - VIEWER_TOKEN=${VIEWER_TOKEN:-} # optional public role: read the record, and start a rate-limited run of the current model
+      - VIEWER_CAN_RUN=${VIEWER_CAN_RUN:-1}
+      - VIEWER_RUN_COOLDOWN_SEC=${VIEWER_RUN_COOLDOWN_SEC:-90}
+      - VIEWER_RUNS_PER_IP_DAY=${VIEWER_RUNS_PER_IP_DAY:-6}
+      - VIEWER_RUNS_PER_DAY=${VIEWER_RUNS_PER_DAY:-40}
     volumes:
       - ./logs:/logs
     networks:

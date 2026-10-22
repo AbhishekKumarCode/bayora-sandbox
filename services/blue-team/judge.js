@@ -71,11 +71,30 @@ async function llmJudge(responseText) {
   }
 }
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// Transient failures (429, 5xx, network, timeout) are retried with backoff
+// before falling back to the keyword classifier, so a single provider blip
+// does not silently downgrade a verdict.
+async function llmJudgeWithRetry(text) {
+  let lastErr;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try { return await llmJudge(text); }
+    catch (err) {
+      lastErr = err;
+      const m = /judge API (\d+)/.exec(err.message);
+      const transient = !m || m[1] === "429" || Number(m[1]) >= 500;
+      if (!transient || attempt === 2) break;
+      await sleep(1200 * (attempt + 1) ** 2);
+    }
+  }
+  throw lastErr;
+}
+
 export async function judge(responseText) {
   const keyword = classify(responseText);
   if (judgeInfo().kind === "llm") {
     try {
-      const llm = await llmJudge(responseText);
+      const llm = await llmJudgeWithRetry(responseText);
       // Cross-check: if the deterministic classifier sees clear compliance
       // but the LLM judge says blocked, an injected "say blocked" is the
       // likeliest cause. Escalate instead of trusting either alone.

@@ -31,14 +31,19 @@ export async function healStaleBrokerUrl(): Promise<boolean> {
 
 const TOKEN_KEY = "bayora_audit_token";
 
+// The operator token lives in this tab's session storage. If the operator
+// ticks "stay unlocked on this device" it is also kept in local storage of
+// this browser (never sent anywhere except the broker).
 export function getStoredToken(): string {
-  try { return sessionStorage.getItem(TOKEN_KEY) || ""; } catch { return ""; }
+  try { return sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY) || ""; } catch { return ""; }
 }
-export function storeToken(token: string) {
+export function storeToken(token: string, remember = false) {
   try { sessionStorage.setItem(TOKEN_KEY, token); } catch { /* ignore */ }
+  try { if (remember) localStorage.setItem(TOKEN_KEY, token); else localStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ }
 }
 export function clearToken() {
   try { sessionStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ }
+  try { localStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ }
 }
 
 function authHeaders(): HeadersInit {
@@ -109,11 +114,12 @@ export async function triggerRun(model?: string): Promise<{ status: string }> {
   const res = await safeFetch(`${getBrokerUrl()}/trigger-run`, { method: "POST", headers: { ...authHeaders(), "content-type": "application/json" }, body: JSON.stringify(model ? { model } : {}) });
   const json = await res.json().catch(() => ({}));
   if (res.status === 401 || res.status === 403) throw new ForbiddenError("bad AUDIT_TOKEN");
+  if (res.status === 429) throw new Error(`${json.error || "Please wait a little."} Try again in ${json.retryAfterSec ?? 60}s.`);
   if (!res.ok) throw new Error(json.error || `trigger-run ${res.status}`);
   return json;
 }
 
-export type BrokerConfig = { provider: string; model: string; baseUrl: string | null; mockMode: boolean; systemPrompt: string | null; secretMarkers?: string[]; runInProgress: boolean; compare?: { models: string[]; index: number; startedAt: number } | null; role?: "operator" | "viewer" };
+export type BrokerConfig = { provider: string; model: string; baseUrl: string | null; mockMode: boolean; systemPrompt: string | null; secretMarkers?: string[]; runInProgress: boolean; compare?: { models: string[]; index: number; startedAt: number } | null; role?: "operator" | "viewer"; canRun?: boolean; nextRunInSec?: number };
 export type CatalogAttack = { technique: string; prompt: string };
 
 async function auditGet<T>(path: string): Promise<T> {

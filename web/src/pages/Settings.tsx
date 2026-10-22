@@ -19,8 +19,8 @@ export function Settings() {
       {s.source === "broker" && s.role === "operator" ? <ModelCard /> : (
         <Tile tone="violet" className="p-5">
           <div className="label text-muted">Model under test</div>
-          <p className="mt-2 text-[13.5px] text-ink-2">{s.source === "broker" ? `Currently under test: ${s.modelName ?? (s.mockMode ? "mock" : "…")}. Unlock with the operator token to switch it.` : "Connect a broker to see which model is being attacked and switch it from here."}</p>
-          <Button variant="primary" className="mt-4" onClick={() => setOpen(true)}>{s.source === "broker" ? "Unlock controls" : "Connect broker"}</Button>
+          <p className="mt-2 text-[13.5px] text-ink-2">{s.source === "broker" ? `Currently under test: ${s.modelName ?? (s.mockMode ? "mock" : "…")}. Sign in as the operator to switch it.` : "Connect a broker to see which model is being attacked and switch it from here."}</p>
+          <Button variant="primary" className="mt-4" onClick={() => setOpen(true)}>{s.source === "broker" ? "Operator login" : "Connect broker"}</Button>
         </Tile>
       )}
 
@@ -40,14 +40,14 @@ export function Settings() {
         <div className="display mt-2 text-[20px]">{s.source === "broker" ? "Live broker" : "Not connected"}</div>
         <div className="mt-1 text-[13px] font-semibold text-ink-2">{s.source === "broker" ? "The audit token lives in this tab's session storage only." : "No broker reachable. Nothing to show."}</div>
         <div className="mt-4 flex gap-2">
-          {s.role === "operator" ? <Button onClick={s.disconnect}>Lock controls</Button> : s.source !== "broker" ? <Button variant="primary" onClick={() => setOpen(true)}>Connect broker</Button> : <span className="text-[13px] text-muted">Read-only. Unlock from the model card above.</span>}
+          {s.role === "operator" ? <Button onClick={s.disconnect}>Sign out</Button> : s.source !== "broker" ? <Button variant="primary" onClick={() => setOpen(true)}>Connect broker</Button> : <span className="text-[13px] text-muted">Visitor session. Sign in from the model card above.</span>}
         </div>
       </Card>
 
       <Card className="p-5">
         <div className="label text-muted">Roles this UI holds</div>
         <ul className="mt-2 space-y-1.5 text-[13px] font-semibold text-ink-2">
-          <li><span className="mono font-bold text-ink">AUDIT_TOKEN</span>: read the chain, verify it, start a run, switch the model under test. Only after you paste it.</li>
+          <li><span className="mono font-bold text-ink">AUDIT_TOKEN</span>: read the chain, verify it, start a run, switch the model under test. Only after you sign in.</li>
           <li><span className="mono font-bold text-ink">RED_TEAM_TOKEN</span>: never held here.</li>
           <li><span className="mono font-bold text-ink">BLUE_TEAM_TOKEN</span>: never held here. The judge's model is set in the blue container, not from this page, so the operator cannot quietly swap the judge.</li>
         </ul>

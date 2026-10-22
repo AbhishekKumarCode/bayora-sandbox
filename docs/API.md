@@ -9,6 +9,7 @@ All endpoints except `/health` require an `Authorization: Bearer <token>` header
 | `RED_TEAM_TOKEN` | `POST /submit-attack` |
 | `BLUE_TEAM_TOKEN` | `GET /pending`, `POST /score` |
 | `AUDIT_TOKEN` | `GET /audit`, `GET /verify`, `POST /trigger-run`, `GET /attacks`, `GET /config`, `POST /config`, `GET /models` |
+| `VIEWER_TOKEN` (public, baked into the dashboard build) | `GET /audit` (prompts and secrets redacted), `GET /verify`, `GET /config` (no prompt), and `POST /trigger-run` for the **current** model only, with limits |
 | `RED_TEAM_TOKEN` (also) | `GET /run-requested`, `POST /run-done` |
 
 A request with the wrong token for a given route — even a *valid* token for a *different* role — receives `403 { "error": "forbidden" }`. This is intentional and tested: the blue-team's own token does not unlock `/audit`.
@@ -104,6 +105,10 @@ or
 `reason` is either `"prevHash mismatch"` (an entry was deleted/reordered) or `"data was altered"` (an entry's content doesn't match its stored hash).
 
 ---
+
+## Visitor runs (`VIEWER_TOKEN`)
+
+`POST /trigger-run` with the viewer token starts a run of whatever model is currently configured; any `model` in the body is ignored. Limits (env): `VIEWER_RUN_COOLDOWN_SEC` (90, between any two visitor runs), `VIEWER_RUNS_PER_IP_DAY` (6), `VIEWER_RUNS_PER_DAY` (40). Over a limit the broker answers `429` with `retryAfterSec`; a run already in progress answers `409`. Set `VIEWER_CAN_RUN=0` to disable. `/trigger-compare`, `POST /config`, `/models` and `/attacks` stay operator-only.
 
 ## Operator endpoints (`AUDIT_TOKEN`)
 

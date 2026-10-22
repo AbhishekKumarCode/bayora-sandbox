@@ -47,7 +47,7 @@ export function Shell() {
       </div>
       <div className="mt-2 flex items-center gap-2">
         {s.source === "broker" ? <Plug size={16} strokeWidth={2.5} /> : <Database size={16} strokeWidth={2.5} />}
-        <div className="display text-[15px]">{s.source === "broker" ? (s.role === "operator" ? "Live · operator" : "Live · read-only") : "Not connected"}</div>
+        <div className="display text-[15px]">{s.source === "broker" ? (s.role === "operator" ? "Live · operator" : "Live · visitor") : "Not connected"}</div>
         {s.mockMode && s.source === "broker" && <Pill tone="amber" className="ml-auto">mock</Pill>}
       </div>
       {(s.modelName || s.judgeModel) && (
@@ -92,11 +92,11 @@ export function Shell() {
                 <div className="hidden items-center gap-2 rounded-full border border-line bg-white/70 py-1 pl-3 pr-1.5 text-[12.5px] font-semibold md:flex" title={getBrokerUrl()}>
                   <span className={cx("h-2.5 w-2.5 border border-line", s.brokerOnline ? "bg-green" : s.brokerOnline === false ? "bg-red" : "bg-faint")} />
                   <span className="text-[12px] font-semibold">
-                    {s.brokerOnline === false ? "broker unreachable" : s.source === "broker" ? `${s.role === "operator" ? "operator" : "live · read-only"} · ${sinceLastPoll == null ? "…" : sinceLastPoll + "s"}` : s.brokerOnline ? `online${s.mockMode ? " · mock" : ""}` : "checking"}
+                    {s.brokerOnline === false ? "broker unreachable" : s.source === "broker" ? `${s.role === "operator" ? "operator" : "live"} · ${sinceLastPoll == null ? "…" : sinceLastPoll + "s"}` : s.brokerOnline ? `online${s.mockMode ? " · mock" : ""}` : "checking"}
                   </span>
                   {s.role === "operator"
-                    ? <button onClick={s.disconnect} className="b-pill ink cursor-pointer">lock</button>
-                    : <button onClick={() => setConnectOpen(true)} className="b-pill ink cursor-pointer">unlock</button>}
+                    ? <button onClick={s.disconnect} className="b-pill ink cursor-pointer">sign out</button>
+                    : <button onClick={() => setConnectOpen(true)} className="b-pill ink cursor-pointer">operator login</button>}
                 </div>
                 
                 <button onClick={() => setOpen(true)} aria-label="Open menu" className="border border-line bg-card p-1.5 lg:hidden"><Menu size={18} strokeWidth={2.5} /></button>

@@ -42,10 +42,10 @@ export function Overview() {
         <p className="mt-3 text-[15px] text-ink-2">{latest ? `Run ${latest.index} · started ${fmtDate(latest.startedAt)} ${fmtTime(latest.startedAt)} · took ${fmtDuration(latest.startedAt, latest.endedAt)} · ${latest.blocked} blocked, ${latest.ambiguous} unsure.` : "Start a run to attack it."}</p>
         {latest && <div className="mt-5 flex items-center gap-3"><VerdictStrip size={16} verdicts={latest.attacks.map((a) => a.error ? "error" : (a.verdict?.data.verdict ?? "pending"))} /><span className="text-[12.5px] text-muted">one block per attack, in order</span></div>}
         <div className="mt-7 flex flex-wrap gap-3">
-          {latest && <Button variant={s.role === "operator" ? "secondary" : "primary"} to={`/app/runs/${latest.id}`}>Open the last run <ArrowRight size={16} /></Button>}
-          {s.role === "operator"
+          {latest && <Button variant="secondary" to={`/app/runs/${latest.id}`}>Open the last run <ArrowRight size={16} /></Button>}
+          {s.canRun
             ? <Button variant="primary" to="/app/live"><Play size={16} /> Start a run</Button>
-            : <Button variant="ghost" onClick={() => setConnectOpen(true)} title="Starting a run needs the operator token"><Lock size={14} /> Start a run</Button>}
+            : <Button variant="ghost" disabled title="Visitors cannot start runs on this broker"><Lock size={14} /> Start a run</Button>}
           <Button variant="ghost" to="/app/live">Watch the live view</Button>
         </div>
       </Card>
@@ -126,7 +126,7 @@ export function Overview() {
           </Card>
         </div>
       ) : runs.length === 1 ? (
-        <Card flat className="p-5 text-[13.5px] text-ink-2">Trends appear after a second run. {s.role === "operator" ? <Link to="/app/live" className="font-semibold underline decoration-2 underline-offset-4">Start one</Link> : "Ask the operator to run the suite again, or against another model."}</Card>
+        <Card flat className="p-5 text-[13.5px] text-ink-2">Trends appear after a second run. {s.canRun ? <Link to="/app/live" className="font-semibold underline decoration-2 underline-offset-4">Start one</Link> : "Ask the operator to run the suite again."}</Card>
       ) : null}
 
       {s.entries.length > 0 && <p className="text-[12.5px] text-ink-2">The record has {s.entries.length} entries. Latest hash <Hash value={s.entries[s.entries.length - 1].hash} /> · {fmtAgo(s.entries[s.entries.length - 1].ts, now)}.</p>}

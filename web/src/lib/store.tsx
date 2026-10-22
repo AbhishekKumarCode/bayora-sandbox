@@ -6,7 +6,8 @@ export type Source = "demo" | "broker";
 export type Role = "operator" | "viewer";
 type Store = {
   source: Source;
-  role: Role;                  // operator = audit token entered; viewer = baked read-only token
+  role: Role;                  // operator = audit token entered; viewer = baked public token
+  canRun: boolean;             // may start a run (operators always; visitors when the broker allows it)
   connected: boolean;          // broker + token working
   brokerOnline: boolean | null; // health probe
   mockMode: boolean;
@@ -17,7 +18,7 @@ type Store = {
   loading: boolean;
   error: string | null;
   lastPollAt: number;
-  connect: (token: string) => Promise<string | null>; // null = ok, else error message
+  connect: (token: string, remember?: boolean) => Promise<string | null>; // null = ok, else error message
   recheckHealth: () => Promise<void>;
   disconnect: () => void;
   useDemo: () => void;
@@ -38,6 +39,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [mockMode, setMockMode] = useState(false);
   const [modelName, setModelName] = useState<string | null>(null);
   const [secretMarkers, setSecretMarkers] = useState<string[]>([]);
+  const [viewerCanRun, setViewerCanRun] = useState(false);
   const [connected, setConnected] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +50,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     let alive = true;
     healStaleBrokerUrl().finally(() => {
       getHealth().then((h) => { if (alive) { setBrokerOnline(h.ok); setMockMode(h.mockMode); } }).catch(() => alive && setBrokerOnline(false));
-      if (getStoredToken() || VIEWER_TOKEN) getConfig().then((c) => { if (alive) { setModelName(c.mockMode ? null : c.model); setSecretMarkers(c.secretMarkers ?? []); } }).catch(() => {});
+      if (getStoredToken() || VIEWER_TOKEN) getConfig().then((c) => { if (alive) { setModelName(c.mockMode ? null : c.model); setSecretMarkers(c.secretMarkers ?? []); setViewerCanRun(Boolean(c.canRun)); } }).catch(() => {});
     });
     const id = setInterval(() => {
       getHealth().then((h) => { if (alive) { setBrokerOnline(h.ok); setMockMode(h.mockMode); } }).catch(() => alive && setBrokerOnline(false));
@@ -102,14 +104,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     catch { setBrokerOnline(false); }
     // model name is operator-only, so it needs the audit token
     if (getStoredToken() || VIEWER_TOKEN) {
-      try { const c = await getConfig(); setModelName(c.mockMode ? null : c.model); setSecretMarkers(c.secretMarkers ?? []); } catch { /* keep last */ }
+      try { const c = await getConfig(); setModelName(c.mockMode ? null : c.model); setSecretMarkers(c.secretMarkers ?? []); setViewerCanRun(Boolean(c.canRun)); } catch { /* keep last */ }
     } else {
       setModelName(null);
     }
   }, []);
 
-  const connect = useCallback(async (token: string) => {
-    storeToken(token.trim());
+  const connect = useCallback(async (token: string, remember = false) => {
+    storeToken(token.trim(), remember);
     try {
       const { entries: next } = await getAudit();
       lastCount.current = next.length;
@@ -152,23 +154,39 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const guard = useCallback(() => {
     if (source !== "broker") throw new Error("Not connected to a broker.");
-    if (role !== "operator") throw new Error("Starting a run needs the operator token. Visitors can watch, verify and read everything.");
-  }, [source, role]);
-  const triggerRun = useCallback(async (model?: string) => { guard(); const r = await apiTriggerRun(model); return r.status; }, [guard]);
-  const triggerCompare = useCallback(async (models: string[]) => { guard(); const r = await apiTriggerCompare(models); return r.status; }, [guard]);
+  }, [source]);
+  const canRun = source === "broker" && (role === "operator" || viewerCanRun);
+  const triggerRun = useCallback(async (model?: string) => {
+    guard();
+    if (!canRun) throw new Error("This broker does not allow visitors to start runs.");
+    const r = await apiTriggerRun(role === "operator" ? model : undefined);
+    return r.status;
+  }, [guard, canRun, role]);
+  const triggerCompare = useCallback(async (models: string[]) => {
+    guard();
+    if (role !== "operator") throw new Error("Comparing models needs the operator token.");
+    const r = await apiTriggerCompare(models);
+    return r.status;
+  }, [guard, role]);
 
   const judgeModel = useMemo(() => {
+    // The last verdict that was produced by an LLM judge names the judge; a single
+    // keyword-fallback verdict must not make the header flicker.
+    let sawVerdict = false;
     for (let i = entries.length - 1; i >= 0; i--) {
       const e = entries[i];
-      if (e.event === "blue_team_verdict") { const m = /llm judge \(([^)]+)\)/.exec(e.data.notes ?? ""); return m ? m[1] : "keyword classifier"; }
+      if (e.event !== "blue_team_verdict") continue;
+      sawVerdict = true;
+      const m = /llm judge \(([^)]+)\)/.exec(e.data.notes ?? "");
+      if (m) return m[1];
     }
-    return null;
+    return sawVerdict ? "keyword classifier" : null;
   }, [entries]);
 
   const value = useMemo<Store>(() => ({
-    source, role, connected, brokerOnline, mockMode, modelName, judgeModel, secretMarkers, entries, loading, error, lastPollAt,
+    source, role, canRun, connected, brokerOnline, mockMode, modelName, judgeModel, secretMarkers, entries, loading, error, lastPollAt,
     connect, disconnect, useDemo, verify, triggerRun, triggerCompare, recheckHealth,
-  }), [source, role, connected, brokerOnline, mockMode, modelName, judgeModel, secretMarkers, entries, loading, error, lastPollAt, connect, disconnect, useDemo, verify, triggerRun, triggerCompare, recheckHealth]);
+  }), [source, role, canRun, connected, brokerOnline, mockMode, modelName, judgeModel, secretMarkers, entries, loading, error, lastPollAt, connect, disconnect, useDemo, verify, triggerRun, triggerCompare, recheckHealth]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -24,7 +24,7 @@ export function Compare() {
           <h1 className="display text-[36px] sm:text-[44px]">Compare models</h1>
           <p className="mt-2 text-[14.5px] font-semibold text-ink-2">Same attacks, same blind judge, same sealed record. Only the model differs. Pick up to three.</p>
         </div>
-        {s.role === "operator" ? <Button variant="primary" to="/app/settings"><GitCompare size={15} /> Run two models back to back</Button> : <Pill tone="blue">read-only · unlock to run</Pill>}
+        {s.role === "operator" ? <Button variant="primary" to="/app/settings"><GitCompare size={15} /> Run two models back to back</Button> : <Pill tone="blue">operator login needed to run two models</Pill>}
       </div>
 
       {all.length < 2 ? (

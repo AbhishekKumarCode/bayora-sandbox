@@ -54,12 +54,12 @@ export function Live() {
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div><h1 className="display text-[36px] sm:text-[44px]">Live run</h1><p className="mt-2 text-[14.5px] text-ink-2">Each attack goes red room → hallway → blue room → ledger. Watch it happen, then read the cards.{s.role !== "operator" && " You are viewing read-only; replay works, starting a run needs the operator token."}</p></div>
+        <div><h1 className="display text-[36px] sm:text-[44px]">Live run</h1><p className="mt-2 text-[14.5px] text-ink-2">Each attack goes red room → hallway → blue room → ledger. Watch it happen, then read the cards.{s.canRun ? " Anyone can start a run; visitor runs have a short cooldown." : " Starting a run is disabled for visitors on this broker."}</p></div>
         <div className="flex gap-3">
-          {!live && <Button variant={s.role === "operator" ? "secondary" : "primary"} onClick={() => setReplay("model")} disabled={!!replay}><RotateCcw size={14} /> Replay an attack</Button>}
-          {s.role === "operator"
-            ? <Button variant="primary" onClick={start} disabled={starting || live}><Play size={15} /> {starting ? "Starting…" : "Start a run"}</Button>
-            : <Button variant="ghost" onClick={() => setConnectOpen(true)} title="Starting a run needs the operator token"><Lock size={14} /> Start a run</Button>}
+          {!live && <Button variant="secondary" onClick={() => setReplay("model")} disabled={!!replay}><RotateCcw size={14} /> Replay an attack</Button>}
+          {s.canRun
+            ? <Button variant="primary" onClick={start} disabled={starting || live}><Play size={15} /> {starting ? "Starting…" : live ? "Run in progress" : "Start a run"}</Button>
+            : <Button variant="ghost" disabled title="Visitors cannot start runs on this broker"><Lock size={14} /> Start a run</Button>}
         </div>
       </div>
       {msg && <div className={cx("rounded-[12px] border border-line px-4 py-3 text-[13.5px] font-semibold rise", msg.startsWith("Run started") ? "bg-green" : "bg-amber")}>{msg}</div>}
@@ -84,7 +84,7 @@ export function Live() {
           {s.mockMode && <Pill tone="amber">mock LLM</Pill>}
         </div>
         {recent.length === 0 ? (
-          <Card flat className="p-10 text-center"><div className="display text-[18px]">No attacks yet</div><p className="mt-1 text-[13.5px] text-muted">{s.role === "operator" ? "Press Start a run." : "Ask the operator to start a run, or come back in a minute."}</p></Card>
+          <Card flat className="p-10 text-center"><div className="display text-[18px]">No attacks yet</div><p className="mt-1 text-[13.5px] text-muted">{s.canRun ? "Press Start a run." : "Ask the operator to start a run."}</p></Card>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {recent.map((a) => <AttackMiniCard key={a.attackId} a={a} animate={fresh.has(a.attackId)} onOpen={() => setOpen(a.attackId)} />)}

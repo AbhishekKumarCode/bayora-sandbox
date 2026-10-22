@@ -10,6 +10,23 @@ const AUDIT_TOKEN = process.env.AUDIT_TOKEN;
 // Optional read-only role for public viewers (judges, visitors): can read the
 // chain, verify it and see config, but cannot start runs or change the model.
 const VIEWER_TOKEN = process.env.VIEWER_TOKEN || "";
+// Visitors (viewer role) may start a run of the CURRENT model, with limits.
+// They can never switch the model, compare models, or read prompts.
+const VIEWER_CAN_RUN = VIEWER_TOKEN && process.env.VIEWER_CAN_RUN !== "0";
+const VIEWER_RUN_COOLDOWN_SEC = Number(process.env.VIEWER_RUN_COOLDOWN_SEC || 90);   // between any two visitor runs, globally
+const VIEWER_RUNS_PER_IP_DAY = Number(process.env.VIEWER_RUNS_PER_IP_DAY || 6);
+const VIEWER_RUNS_PER_DAY = Number(process.env.VIEWER_RUNS_PER_DAY || 40);           // globally
+const viewerRunLog = []; // { t: ms, ip }
+function viewerRunCheck(ip) {
+  const now = Date.now();
+  while (viewerRunLog.length && now - viewerRunLog[0].t > 864e5) viewerRunLog.shift();
+  const last = viewerRunLog[viewerRunLog.length - 1];
+  if (last && now - last.t < VIEWER_RUN_COOLDOWN_SEC * 1000) return { ok: false, retryAfterSec: Math.ceil((VIEWER_RUN_COOLDOWN_SEC * 1000 - (now - last.t)) / 1000), reason: "A run was started a moment ago." };
+  if (viewerRunLog.filter((r) => r.ip === ip).length >= VIEWER_RUNS_PER_IP_DAY) return { ok: false, retryAfterSec: 3600, reason: `Visitors can start ${VIEWER_RUNS_PER_IP_DAY} runs per day from one address.` };
+  if (viewerRunLog.length >= VIEWER_RUNS_PER_DAY) return { ok: false, retryAfterSec: 3600, reason: "The daily limit for visitor-started runs has been reached." };
+  return { ok: true };
+}
+const nextViewerRunInSec = () => { const last = viewerRunLog[viewerRunLog.length - 1]; return last ? Math.max(0, Math.ceil((VIEWER_RUN_COOLDOWN_SEC * 1000 - (Date.now() - last.t)) / 1000)) : 0; };
 
 for (const [name, val] of Object.entries({ RED_TEAM_TOKEN, BLUE_TEAM_TOKEN, AUDIT_TOKEN })) {
   if (!val) throw new Error(`${name} is required — refusing to run with no role authentication`);
@@ -121,11 +138,19 @@ function startRun() {
   runClaimedAt = 0;
 }
 
-app.post("/trigger-run", requireToken(AUDIT_TOKEN), async (req, res) => {
+app.post("/trigger-run", requireToken(AUDIT_TOKEN, VIEWER_TOKEN), async (req, res) => {
+  if (req.role === "viewer" && !VIEWER_CAN_RUN) return res.status(403).json({ error: "visitors cannot start runs on this broker" });
   if (runInProgress) {
     return res.status(409).json({ error: "a run is already in progress" });
   }
-  if (req.body?.model) {
+  if (req.role === "viewer") {
+    // visitors run whatever model is currently configured; the model field is ignored
+    const ip = req.header("cf-connecting-ip") || req.ip || "unknown";
+    const chk = viewerRunCheck(ip);
+    if (!chk.ok) { res.set("Retry-After", String(chk.retryAfterSec)); return res.status(429).json({ error: chk.reason, retryAfterSec: chk.retryAfterSec }); }
+    viewerRunLog.push({ t: Date.now(), ip });
+    console.log(`[trigger-run] visitor-started run (${viewerRunLog.length} in the last 24h)`);
+  } else if (req.body?.model) {
     try { setModel(req.body.model); } catch (err) { return res.status(err.status || 400).json({ error: err.message }); }
   }
   startRun();
@@ -211,11 +236,11 @@ app.get("/attacks", requireToken(AUDIT_TOKEN), async (req, res) => {
 
 app.get("/config", requireToken(AUDIT_TOKEN, VIEWER_TOKEN), (req, res) => {
   const d = llmDetails();
-  if (req.role === "viewer") return res.json({ provider: d.provider, model: d.model, baseUrl: null, mockMode: isMockMode(), systemPrompt: null, runInProgress, compare: compareState, role: "viewer" });
-  res.json({ ...d, mockMode: isMockMode(), systemPrompt: SYSTEM_PROMPT, secretMarkers: SECRET_MARKERS, runInProgress, compare: compareState, role: req.role });
+  if (req.role === "viewer") return res.json({ provider: d.provider, model: d.model, baseUrl: null, mockMode: isMockMode(), systemPrompt: null, runInProgress, compare: compareState, role: "viewer", canRun: Boolean(VIEWER_CAN_RUN), nextRunInSec: nextViewerRunInSec() });
+  res.json({ ...d, mockMode: isMockMode(), systemPrompt: SYSTEM_PROMPT, secretMarkers: SECRET_MARKERS, runInProgress, compare: compareState, role: req.role, canRun: true, nextRunInSec: 0 });
 });
 
-app.get("/models", requireToken(AUDIT_TOKEN, VIEWER_TOKEN), async (req, res) => {
+app.get("/models", requireToken(AUDIT_TOKEN), async (req, res) => {
   try {
     res.json({ models: await listModels(), current: llmDetails().model });
   } catch (err) {

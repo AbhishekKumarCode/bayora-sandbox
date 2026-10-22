@@ -11,6 +11,7 @@ export function ConnectDialog({ onClose }: { onClose: () => void }) {
   const [url, setUrl] = useState(getBrokerUrl());
   const [token, setToken] = useState("");
   const [show, setShow] = useState(false);
+  const [remember, setRemember] = useState(true);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [probe, setProbe] = useState<Probe>({ state: "idle" });
@@ -33,7 +34,7 @@ export function ConnectDialog({ onClose }: { onClose: () => void }) {
     e.preventDefault();
     if (!token.trim()) return;
     setBusy(true); setErr(null);
-    const msg = await s.connect(token);
+    const msg = await s.connect(token, remember);
     setBusy(false);
     if (msg == null) onClose(); else setErr(msg);
   }
@@ -42,12 +43,12 @@ export function ConnectDialog({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="modal-backdrop absolute inset-0" onClick={onClose} />
-      <form onSubmit={submit} role="dialog" aria-modal="true" aria-label="Unlock operator controls" className="modal-surface b-card relative w-full max-w-lg rounded-[18px] p-6 rise">
+      <form onSubmit={submit} role="dialog" aria-modal="true" aria-label="Operator login" className="modal-surface b-card relative w-full max-w-lg rounded-[18px] p-6 rise">
         <div className="flex items-start justify-between">
-          <h2 className="display text-[24px]">Unlock operator controls</h2>
+          <h2 className="display text-[24px]">Operator login</h2>
           <button type="button" onClick={onClose} aria-label="Close" className="border border-line bg-card p-1"><X size={16} strokeWidth={2.5} /></button>
         </div>
-        <p className="mt-2 text-[13.5px] text-ink-2">Visitors already see live data. The audit token adds the ability to start runs and switch the model under test.</p>
+        <p className="mt-2 text-[13.5px] text-ink-2">You do not need this to look around or to start a run: visitors can do both. The audit token adds switching the model, comparing two models, and reading the exact attack prompts.</p>
 
         <Step n={1} title="Broker address" status={probe.state === "ok" ? "ok" : probe.state === "fail" ? "fail" : "checking"}>
           <input id="broker-url" value={url} onChange={(e) => setUrl(e.target.value)} spellCheck={false} className="b-input text-[12.5px]" />
@@ -73,9 +74,14 @@ export function ConnectDialog({ onClose }: { onClose: () => void }) {
           {err && <div className="mt-3 border border-line bg-red px-3 py-2 text-[12.5px] font-semibold text-white">{err}</div>}
         </Step>
 
+        <label className="mt-4 flex cursor-pointer items-start gap-2.5 text-[13px] text-ink-2">
+          <input id="remember-token" type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[#4a5be6]" />
+          <span><span className="font-semibold text-ink">Stay signed in on this device.</span> Stored in this browser only and sent only to the broker. Use "Sign out" to forget it.</span>
+        </label>
+
         <div className="mt-6 flex justify-end gap-3">
           <Button type="button" onClick={onClose}>Cancel</Button>
-          <Button type="submit" variant="primary" disabled={busy || !token.trim() || probe.state !== "ok"}>{busy ? "Unlocking…" : "Unlock"}</Button>
+          <Button type="submit" variant="primary" disabled={busy || !token.trim() || probe.state !== "ok"}>{busy ? "Signing in…" : "Sign in"}</Button>
         </div>
       </form>
     </div>

@@ -86,7 +86,7 @@ npm install
 npm run dev          # http://localhost:5173
 ```
 
-Open `/app`, click **connect** in the header, and paste the `AUDIT_TOKEN` from
+Open `/app`. Visitors need nothing: they can read the record, verify it, and start a rate-limited run of the current model. Click **operator login** in the header, and paste the `AUDIT_TOKEN` from
 the root `.env`. The token stays in that tab's session storage. The broker URL
 is editable in the same dialog (default: `VITE_BROKER_URL` at build time).
 

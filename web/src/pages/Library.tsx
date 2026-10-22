@@ -52,7 +52,7 @@ export function Library() {
     <div className="space-y-8">
       <div>
         <h1 className="display text-[36px] sm:text-[44px]">Attack library</h1>
-        <p className="mt-2 text-[14.5px] font-semibold text-ink-2">The techniques the red room fires, and how the model has held up against each one.{catalog ? " Prompts below are read live from the broker." : " Unlock with the operator token to read the exact prompts."}</p>
+        <p className="mt-2 text-[14.5px] font-semibold text-ink-2">The techniques the red room fires, and how the model has held up against each one.{catalog ? " Prompts below are read live from the broker." : " Sign in as the operator to read the exact prompts."}</p>
       </div>
 
       {/* Heatmap: technique × run */}
@@ -132,7 +132,7 @@ export function Library() {
             <p className="mt-4 text-[15px] font-semibold">{sel.summary}</p>
             <div className="label mt-5 text-muted">The exact prompt the red room sends</div>
             {sel.prompt ? <pre className="mono mt-2 whitespace-pre-wrap rounded-[12px] border border-line bg-white/70 p-4 text-[12.5px] leading-relaxed">{sel.prompt}</pre>
-              : <div className="mt-2 rounded-[12px] border border-dashed border-line-strong p-4 text-[13px] text-ink-2">Hidden from read-only viewers so the judge model can never obtain it. Unlock with the operator token to read it.</div>}
+              : <div className="mt-2 rounded-[12px] border border-dashed border-line-strong p-4 text-[13px] text-ink-2">Hidden from read-only viewers so the judge model can never obtain it. Sign in as the operator to read it.</div>}
             {(() => { const st = statFor(sel.id); return st ? (
               <div className="mt-5 grid grid-cols-3 gap-3">
                 <Mini k="Fired" v={st.total} />
