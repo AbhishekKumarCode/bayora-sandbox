@@ -82,11 +82,10 @@ function Bubble({ at, color, label, t, scale = 1 }: { at: readonly [number, numb
   );
 }
 
-export const STAGE_STEPS: Array<{ key: Stage | "done"; n: number; title: string; desc: string }> = [
+export const STAGE_STEPS: Array<{ key: Stage; n: number; title: string; desc: string }> = [
   { key: "model", n: 1, title: "Attack sent", desc: "The red room sends a prompt into the hallway, which forwards it to the model." },
   { key: "judge", n: 2, title: "Reply forwarded", desc: "Only the model's reply travels on. The prompt stays locked in the hallway." },
-  { key: "seal", n: 3, title: "Judged blind", desc: "The blue room scores the reply without ever seeing the attack." },
-  { key: "done", n: 4, title: "Sealed", desc: "The verdict is written to the ledger, chained to the entry before it." },
+  { key: "seal", n: 3, title: "Judged and sealed", desc: "The blue room scores the reply without ever seeing the attack, and the verdict is chained into the ledger." },
 ];
 
 export function IsoSandbox({ stage = "idle", through = 0, total = 0, model, className, compact = false, lastVerdict }: { stage?: Stage; through?: number; total?: number; model?: string; className?: string; compact?: boolean; lastVerdict?: "blocked" | "passed_through" | "ambiguous" | null }) {
@@ -99,11 +98,12 @@ export function IsoSandbox({ stage = "idle", through = 0, total = 0, model, clas
   const P = (a: number, b: number, c: number) => iso(a, b, c, ox, oy, s);
   const seq = Math.max(1, total);
   const stackH = Math.min(8, Math.max(3, seq)) * 0.9;
+  const ledgerTop = P(28, 21.5, 1 + stackH);
 
-  // bubble paths: start inside the source room, arc out of its roof, follow the tube, sink into the destination
-  const pathA = [P(8, 8, 9), P(10, 8, 11.5), P(14, 8, 8.5), P(20, 8, 7.5), P(24, 8, 6)];
-  const pathB = [P(27, 8, 5), P(30, 8, 7.5), P(34, 8, 7.5), P(40, 8, 8), P(45, 8, 9)];
-  const pathC = [P(46, 8, 9), P(44, 12, 13), P(30, 18, 12), P(14, 22, 7), P(6, 22, 1 + stackH)];
+  // bubble paths follow the tubes at tube height; the verdict bubble drops onto the ledger stack
+  const pathA = [P(8, 8, 1.5), P(14, 8, 1.5), P(20, 8, 1.5), P(25, 8, 1.5)];
+  const pathB = [P(27, 8, 1.5), P(34, 8, 1.5), P(40, 8, 1.5), P(45, 8, 1.5)];
+  const pathC = [P(46, 8, 1.5), P(46, 15, 1.5), P(38, 20, 1.5), P(31, 21.5, 3), [ledgerTop[0], ledgerTop[1]] as const];
 
   const [t, setT] = useState(0);
   const raf = useRef<number | null>(null);
@@ -138,9 +138,9 @@ export function IsoSandbox({ stage = "idle", through = 0, total = 0, model, clas
       <polygon points={pts([P(-2, 24, 0), P(56, 24, 0), P(56, 24, -2.5), P(-2, 24, -2.5)])} fill="#e6e9f2" stroke={INK} strokeWidth={1.5} />
       <polygon points={pts([P(56, -2, 0), P(56, 24, 0), P(56, 24, -2.5), P(56, -2, -2.5)])} fill="#d3d7e3" stroke={INK} strokeWidth={1.5} />
       {/* trenches */}
-      <polygon points={pts([P(0, 16, 0.2), P(20, 16, 0.2), P(20, 19, 0.2), P(0, 19, 0.2)])} fill="#f0a8a3" stroke={INK} strokeWidth={1.2} />
+      <polygon points={pts([P(0, 16, 0.2), P(15, 16, 0.2), P(15, 19, 0.2), P(0, 19, 0.2)])} fill="#f0a8a3" stroke={INK} strokeWidth={1.2} />
       <polygon points={pts([P(34, 16, 0.2), P(54, 16, 0.2), P(54, 19, 0.2), P(34, 19, 0.2)])} fill="#b3c6f4" stroke={INK} strokeWidth={1.2} />
-      <text x={P(15, 17.5, 0.2)[0]} y={P(15, 17.5, 0.2)[1] + 3} textAnchor="middle" fontFamily="JetBrains Mono" fontSize={8} fontWeight="600" fill={INK}>red-net</text>
+      <text x={P(9, 17.5, 0.2)[0]} y={P(9, 17.5, 0.2)[1] + 3} textAnchor="middle" fontFamily="JetBrains Mono" fontSize={8} fontWeight="600" fill={INK}>red-net</text>
       <text x={P(48, 17.5, 0.2)[0]} y={P(48, 17.5, 0.2)[1] + 3} textAnchor="middle" fontFamily="JetBrains Mono" fontSize={8} fontWeight="600" fill={INK}>blue-net</text>
 
       {/* ledger stack (front-left) */}
@@ -148,28 +148,30 @@ export function IsoSandbox({ stage = "idle", through = 0, total = 0, model, clas
         const red = i < through;
         const newest = i === Math.min(8, Math.max(3, seq)) - 1;
         return (
-          <g key={i} style={newest && landed ? { transformOrigin: `${P(6, 22, 1 + stackH)[0]}px ${P(6, 22, 1 + stackH)[1]}px`, animation: "pop .5s cubic-bezier(.34,1.56,.64,1)" } : undefined}>
-            <Box x={3} y={20.5} z={i * 0.9} w={6} d={3} h={0.9} top={red ? "#f0a8a3" : "#a9e0c3"} left={red ? "#cf7f79" : "#79bb98"} right={red ? "#e0948f" : "#8fcdab"} ox={ox} oy={oy} s={s} stroke={1.2} />
+          <g key={i} style={newest && landed ? { transformOrigin: `${ledgerTop[0]}px ${ledgerTop[1]}px`, animation: "pop .5s cubic-bezier(.34,1.56,.64,1)" } : undefined}>
+            <Box x={25} y={20} z={i * 0.9} w={6} d={3} h={0.9} top={red ? "#f0a8a3" : "#a9e0c3"} left={red ? "#cf7f79" : "#79bb98"} right={red ? "#e0948f" : "#8fcdab"} ox={ox} oy={oy} s={s} stroke={1.2} />
           </g>
         );
       })}
 
-      {/* rooms (back to front) */}
+      {/* rooms and tubes, back to front */}
       <Box x={2} y={2} w={12} d={12} h={9} top="#f0a8a3" left="#cf7f79" right="#e0948f" ox={ox} oy={oy} s={s} label="Red room" sub="attacks" hot={stage === "model"} />
-      <Box x={40} y={2} w={12} d={12} h={9} top="#b3c6f4" left="#8aa3dc" right="#9fb5e9" ox={ox} oy={oy} s={s} label="Blue room" sub="judges blind" hot={stage === "seal"} />
-      {/* tubes */}
-      {[[P(14, 8, 7), P(20, 8, 7), P(20, 8, 4)], [P(34, 8, 4), P(34, 8, 7), P(40, 8, 7)]].map((tube, i) => (
-        <g key={i}>
-          <polyline points={pts(tube)} fill="none" stroke={INK} strokeWidth={4} strokeLinejoin="round" strokeLinecap="round" />
-          <polyline points={pts(tube)} fill="none" stroke="#fff" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
-        </g>
-      ))}
+      <g>
+        <polyline points={pts([P(14, 8, 1.5), P(20, 8, 1.5)])} fill="none" stroke={INK} strokeWidth={5} strokeLinecap="round" />
+        <polyline points={pts([P(14, 8, 1.5), P(20, 8, 1.5)])} fill="none" stroke="#fff" strokeWidth={3} strokeLinecap="round" />
+      </g>
       {/* hallway */}
       <Box x={20} y={4} w={14} d={8} h={5} top="#d2c8f5" left="#ab9de0" right="#bfb2ea" ox={ox} oy={oy} s={s} label="Hallway" sub={model ? (model.split("/").pop() ?? model).slice(0, 14) : "broker"} hot={stage === "judge"} />
       <g transform={`translate(${P(27, 12, 2.5)[0] - 6} ${P(27, 12, 2.5)[1] - 8})`}>
         <rect x="0" y="6" width="12" height="9" rx="1.5" fill="#e9d99a" stroke={INK} strokeWidth="1.3" />
         <path d="M3 6V4a3 3 0 0 1 6 0v2" fill="none" stroke={INK} strokeWidth="1.3" />
       </g>
+
+      <g>
+        <polyline points={pts([P(34, 8, 1.5), P(40, 8, 1.5)])} fill="none" stroke={INK} strokeWidth={5} strokeLinecap="round" />
+        <polyline points={pts([P(34, 8, 1.5), P(40, 8, 1.5)])} fill="none" stroke="#fff" strokeWidth={3} strokeLinecap="round" />
+      </g>
+      <Box x={40} y={2} w={12} d={12} h={9} top="#b3c6f4" left="#8aa3dc" right="#9fb5e9" ox={ox} oy={oy} s={s} label="Blue room" sub="judges blind" hot={stage === "seal"} />
 
       {/* bubbles: a trail of three smaller ones behind the main bubble */}
       {path && t < 1 && (
@@ -185,14 +187,20 @@ export function IsoSandbox({ stage = "idle", through = 0, total = 0, model, clas
       )}
       {/* pop ring when the verdict lands */}
       {landed && (
-        <circle cx={P(6, 22, 1 + stackH)[0]} cy={P(6, 22, 1 + stackH)[1]} r="10" fill="none" stroke={color} strokeWidth="1.5" style={{ animation: "ring .6s ease-out forwards", transformOrigin: `${P(6, 22, 1 + stackH)[0]}px ${P(6, 22, 1 + stackH)[1]}px` }} />
+        <circle cx={ledgerTop[0]} cy={ledgerTop[1]} r="10" fill="none" stroke={color} strokeWidth="1.5" style={{ animation: "ring .6s ease-out forwards", transformOrigin: `${ledgerTop[0]}px ${ledgerTop[1]}px` }} />
       )}
 
-      {/* numbered markers */}
-      <Marker at={[P(8, 8, 9)[0], P(8, 8, 9)[1] - 26]} n={1} active={stage === "model"} />
-      <Marker at={[P(27, 8, 5)[0], P(27, 8, 5)[1] - 24]} n={2} active={stage === "judge"} />
-      <Marker at={[P(46, 8, 9)[0], P(46, 8, 9)[1] - 26]} n={3} active={stage === "seal"} />
-      <Marker at={[P(6, 22, 1)[0] - 2, P(6, 22, 1)[1] - 8 - stackH * s - 14]} n={4} active={landed} />
+      {/* numbered markers: one shared baseline, centred over what each step happens in */}
+      {(() => {
+        const my = P(2, 2, 9)[1] - 24;
+        return (
+          <>
+            <Marker at={[P(8, 8, 9)[0], my]} n={1} active={stage === "model"} />
+            <Marker at={[P(27, 8, 5)[0], my]} n={2} active={stage === "judge"} />
+            <Marker at={[P(46, 8, 9)[0], my]} n={3} active={stage === "seal"} />
+          </>
+        );
+      })()}
 
       <text x={10} y={H - 8} textAnchor="start" fontFamily="Public Sans, sans-serif" fontSize={10} fontWeight="600" fill={INK} opacity=".7">Ledger · {total ? `${through} of ${total} got through` : "empty"}</text>
     </svg>
