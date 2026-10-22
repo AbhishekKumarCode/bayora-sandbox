@@ -7,12 +7,17 @@
 #
 # Run it as a service: scripts/install-tunnel-service.sh
 set -u
+umask 077
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 STATE_DIR=${STATE_DIR:-/var/lib/bayora}
 STATE="$STATE_DIR/broker-url"      # the address the live dashboard was last built with
-LOG=${TUNNEL_LOG:-/tmp/cloudflared.log}
 PORT=${BROKER_PORT:-4000}
-mkdir -p "$STATE_DIR"
+# Private, root-only directory: logs here cannot be pre-created or symlinked by other users,
+# and the tunnel address is read back from them, so they must not be forgeable.
+install -d -m 700 "$STATE_DIR"
+LOG="$STATE_DIR/cloudflared.log"
+DEPLOY_LOG="$STATE_DIR/vercel-deploy.log"
+[ -L "$LOG" ] && rm -f "$LOG"; [ -L "$DEPLOY_LOG" ] && rm -f "$DEPLOY_LOG"
 
 log() { echo "[tunnel-watch] $*"; }
 TPID=""
@@ -31,7 +36,7 @@ publish() {
   # Replace the variable; if adding fails, nothing is deployed and the next pass retries.
   npx vercel env rm VITE_BROKER_URL production --yes > /dev/null 2>&1 || true
   npx vercel env add VITE_BROKER_URL --environment production --type config --value "$url" --yes > /dev/null 2>&1 || { log "env add failed"; return 1; }
-  npx vercel --prod --yes > /tmp/bayora-vercel-deploy.log 2>&1 || { log "deploy failed (see /tmp/bayora-vercel-deploy.log)"; return 1; }
+  npx vercel --prod --yes > "$DEPLOY_LOG" 2>&1 || { log "deploy failed (see $DEPLOY_LOG)"; return 1; }
   log "dashboard redeployed for $url"
 }
 
