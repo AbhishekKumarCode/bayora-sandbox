@@ -14,16 +14,47 @@ AdvBench/JailbreakBench sourcing) gets added.
 
 ## Try it (for judges)
 
-Open **https://bayora-sandbox.vercel.app**. No login, no token.
+Open **https://bayora-sandbox.vercel.app**. No login, no token, nothing to install.
 
 1. **Overview** shows what the last run found and which models are involved.
 2. **Live run** → *Start a run* sends seven attacks through the sandbox while you watch; each one appears as a card.
 3. **Audit chain** → *Verify chain*, then *Try to tamper* to see a single edited entry break everything after it.
-4. **Compare models** puts two models side by side on the same attacks and the same blind judge.
+4. **Runs** and **Compare models** show every run and put two models side by side on the same attacks and the same blind judge.
 
-The address ending in `trycloudflare.com` is the **broker**, the API behind the dashboard, and it
-has no page of its own. If you open it in a browser you are redirected to the dashboard.
-The broker runs on the team's machine; if the dashboard says it is unreachable, it retries on its own.
+### What you can and cannot see without a token
+
+| | Visitor (no login) | Operator (token) |
+|---|---|---|
+| Overview, Runs, Audit chain, Compare results, verification | yes | yes |
+| Start a run of the current model | yes, rate-limited (90 s apart, 6 per day per address) | yes |
+| Attack prompts and the full attack library | no | yes |
+| System prompt | no | yes |
+| Switch the model, run a two-model comparison | no | yes |
+
+Visitors use a read-only token that is built into the public page. It is deliberately
+limited: anything it can read is public, so the blind judge could never learn an attack
+prompt from the site.
+
+### Operator access
+
+The operator token (`AUDIT_TOKEN`) is never shown in the dashboard. It is given to
+judges in the submission notes. To use it: open the dashboard, click **Operator login**
+in the header, paste the token and click **Connect**. It stays on that device until you
+sign out (untick *Stay signed in* to keep it for the tab only).
+
+For the team: the broker shows the token once, like creating an API key. On the broker
+machine open `http://localhost:4000/setup` and copy it. The page then refuses to show it
+again, and refuses any request that came through the tunnel. Delete `logs/.token-revealed`
+to see it once more. After judging, change `AUDIT_TOKEN` in `.env` and run
+`docker compose up -d broker` to revoke every copy.
+
+### If the dashboard says the broker is unreachable
+
+The address ending in `trycloudflare.com` is the **broker**, the API behind the dashboard,
+and it has no page of its own. If you open it in a browser you are redirected to the
+dashboard. The broker runs on the team's server; if the tunnel restarts its address
+changes and the dashboard is redeployed automatically within about a minute. The page
+retries on its own, and reloading picks up the new address.
 
 ## What's actually isolated here
 
@@ -98,8 +129,7 @@ npm install
 npm run dev          # http://localhost:5173
 ```
 
-Open `/app`. Visitors need nothing: they can read the record, verify it, and start a rate-limited run of the current model. Click **operator login** in the header, and paste the `AUDIT_TOKEN`. Like an API key, the broker shows it once: open `http://localhost:4000/setup` on the broker's machine and copy it (the page then refuses to show it again; it also refuses requests that came through the tunnel). Delete `logs/.token-revealed` to see it once more. It is also in
-the root `.env`. By default the token is kept in this browser ("Stay signed in on this device"); untick it to keep it for the tab only, and use *sign out* to forget it. The broker URL
+Open `/app`. Visitors need nothing: they can read the record, verify it, and start a rate-limited run of the current model. Operators can click **Operator login** in the header and paste the `AUDIT_TOKEN` (see *Operator access* above). By default the token is kept in this browser ("Stay signed in on this device"); untick it to keep it for the tab only, and use *sign out* to forget it. The broker URL
 is editable in the same dialog (default: `VITE_BROKER_URL` at build time).
 
 ## Deploying the dashboard
