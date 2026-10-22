@@ -99,7 +99,7 @@ npm install
 npm run dev          # http://localhost:5173
 ```
 
-Open `/app`. Visitors need nothing: they can read the record, verify it, and start a rate-limited run of the current model. Click **operator login** in the header, and paste the `AUDIT_TOKEN` from
+Open `/app`. Visitors need nothing: they can read the record, verify it, and start a rate-limited run of the current model. Click **operator login** in the header, and paste the `AUDIT_TOKEN`. Like an API key, the broker shows it once: open `http://localhost:4000/setup` on the broker's machine and copy it (the page then refuses to show it again; it also refuses requests that came through the tunnel). Delete `logs/.token-revealed` to see it once more. It is also in
 the root `.env`. The token stays in that tab's session storage. The broker URL
 is editable in the same dialog (default: `VITE_BROKER_URL` at build time).
 

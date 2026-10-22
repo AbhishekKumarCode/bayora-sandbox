@@ -1,6 +1,7 @@
 import express from "express";
 import { randomUUID } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile, access, mkdir } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { appendEntry, readAllEntries, verifyChain } from "./audit.js";
 import { complete, isMockMode, llmInfo, llmDetails, setModel, listModels, SYSTEM_PROMPT, SECRET_MARKERS, MARKERS_MATCH_PROMPT } from "./llm.js";
 
@@ -77,6 +78,27 @@ const DASHBOARD_URL = (process.env.DASHBOARD_URL || "https://bayora-sandbox.verc
 app.get("/", (req, res) => {
   if (req.accepts(["json", "html"]) === "html") return res.redirect(302, DASHBOARD_URL + "/");
   res.json({ service: "bayora-broker", note: "This is the API behind Bayora Sandbox, not a website.", dashboard: DASHBOARD_URL, health: "/health" });
+});
+
+// ---- One-time operator token reveal (like creating an API key) ----
+// The operator opens http://localhost:<port>/setup once; the AUDIT_TOKEN is shown
+// a single time and the broker records that it was. Afterwards the page only says
+// so. It refuses anything that came through the tunnel/proxy (those requests carry
+// forwarding headers), so a stranger on the public address cannot claim it.
+// To show it again: delete logs/.token-revealed and reload.
+const REVEAL_FLAG = join(dirname(process.env.AUDIT_LOG_PATH || "/logs/audit.log"), ".token-revealed");
+const page = (body) => `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bayora operator token</title><body style="font:16px system-ui;max-width:560px;margin:12vh auto;padding:0 20px;color:#1f2430">${body}</body>`;
+app.get("/setup", async (req, res) => {
+  res.set({ "Cache-Control": "no-store", "X-Robots-Tag": "noindex" });
+  if (req.header("x-forwarded-for") || req.header("cf-connecting-ip") || req.header("x-forwarded-host") || req.header("via")) {
+    return res.status(404).send(page("<h2>Not found</h2><p>The operator token can only be revealed on the machine running the broker.</p>"));
+  }
+  let shown = true;
+  try { await access(REVEAL_FLAG); } catch { shown = false; }
+  if (shown) return res.status(410).send(page("<h2>Token already shown</h2><p>The operator token was displayed once and will not be shown again. It is stored in the broker's <code>.env</code> as <code>AUDIT_TOKEN</code>. To see this page again, delete <code>logs/.token-revealed</code>.</p>"));
+  try { await mkdir(dirname(REVEAL_FLAG), { recursive: true }); await writeFile(REVEAL_FLAG, new Date().toISOString()); }
+  catch { return res.status(500).send(page("<h2>Cannot record the reveal</h2><p>The broker could not write its reveal marker, so it will not show the token.</p>")); }
+  res.send(page(`<h2>Your operator token</h2><p><b>Copy it now.</b> It is shown only once and this page will not display it again.</p><pre id="t" style="background:#f4f5f8;padding:14px;border-radius:10px;word-break:break-all;white-space:pre-wrap;user-select:all">${AUDIT_TOKEN}</pre><button onclick="navigator.clipboard.writeText(document.getElementById('t').textContent).then(()=>this.textContent='Copied')" style="padding:10px 16px;border-radius:10px;border:1px solid #ccd;background:#fff;font-weight:600;cursor:pointer">Copy token</button><p style="color:#5d6578;font-size:14px">Paste it under <i>Operator login</i> on the dashboard.</p>`));
 });
 
 app.get("/health", (req, res) => {

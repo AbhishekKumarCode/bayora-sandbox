@@ -6,3 +6,4 @@ logs/*.log
 .vercel
 dist/
 logs/archive/
+logs/.token-revealed
