@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, ShieldCheck, Lock, EyeOff, Network, Menu, X, Code2, Plus, Minus } from "lucide-react";
-import { Button, Actor, Stamp, Tile, cx } from "@/components/ui";
+import { Button, Actor, Pill, Stamp, Tile, cx } from "@/components/ui";
 import { Logo } from "@/components/Shell";
 import { AuditTape } from "@/components/AuditTape";
 import { IsoSandbox, StageSteps } from "@/components/IsoSandbox";
@@ -69,10 +69,10 @@ export function Landing() {
           </div>
           <div className="lg:col-span-6">
             <Tile tone="yellow" depth={14} className="p-4 sm:p-6">
-              <div className="flex items-center justify-between"><span className="label">The sandbox, live</span><span className="label text-muted">{stage === "model" ? "attack in flight" : stage === "judge" ? "judging blind" : stage === "seal" ? "sealing" : "idle"}</span></div>
+              <div className="flex items-center justify-between"><span className="label">The sandbox · animated illustration</span><span className="label text-muted">{stage === "model" ? "attack in flight" : stage === "judge" ? "judging blind" : stage === "seal" ? "sealing" : "idle"}</span></div>
               <IsoSandbox stage={stage} through={stats.passed} total={stats.attacks} model={s.modelName ?? undefined} lastVerdict={leak ? "passed_through" : "blocked"} /><div className="mt-3"><StageSteps stage={stage} compact /></div>
             </Tile>
-            <p className="mt-4 text-center text-[12.5px] text-muted">The real architecture: red room, hallway broker, blue room, ledger.</p>
+            <p className="mt-4 text-center text-[12.5px] text-muted">An animated illustration of the real architecture: red room, hallway broker, blue room, ledger. The live version is on the Live run page.</p>
           </div>
         </div>
       </section>
@@ -211,7 +211,7 @@ function ChainDemo() {
   const rows = ["attack fired", "model replied", "blind verdict", "attack fired", "model replied"];
   return (
     <Tile tone="ink" depth={12} className="p-5">
-      <div className="flex items-center justify-between"><span className="label">Audit chain · <Link to="/app/audit" className="underline decoration-2 underline-offset-4">try it on the real record</Link></span><button onClick={() => setTampered((t) => !t)} className={cx("b-btn h-9 px-3 text-[12px]", tampered ? "danger" : "")}>{tampered ? "Restore" : "Tamper entry 3"}</button></div>
+      <div className="flex items-center justify-between"><span className="label"><Pill tone="amber">simulation</Pill> <Link to="/app/audit" className="underline decoration-2 underline-offset-4">try it on the real record</Link></span><button onClick={() => setTampered((t) => !t)} className={cx("b-btn h-9 px-3 text-[12px]", tampered ? "danger" : "")}>{tampered ? "Restore" : "Tamper entry 3"}</button></div>
       <div className="mt-4 space-y-3">
         {rows.map((r, i) => { const n = i + 1; const broken = tampered && n >= 3; return (
           <div key={n} className={cx("flex items-center gap-3 border border-line px-3 py-2 text-[12.5px] font-bold", broken ? "bg-red text-white" : "bg-white")}>

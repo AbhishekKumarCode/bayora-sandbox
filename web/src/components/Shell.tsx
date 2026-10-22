@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink, Outlet, Link, useLocation } from "react-router-dom";
-import { LayoutGrid, ListChecks, Radio, Library, Link2, Settings2, Menu, X, Plug, Database, GitCompare, RefreshCw, WifiOff } from "lucide-react";
+import { LayoutGrid, ListChecks, Radio, Library, Link2, Settings2, Menu, X, Plug, Database, GitCompare, RefreshCw, WifiOff, ShieldAlert } from "lucide-react";
 import { useStore, useNow } from "@/lib/store";
 import { isLive } from "@/lib/model";
 import { Button, Card, Pill, cx } from "./ui";
@@ -110,6 +110,19 @@ export function Shell() {
           </header>
 
           <main className="mx-auto w-full max-w-[1240px] flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+            {s.source === "broker" && (s.integrity.anchor.state === "changed" || !s.integrity.links.ok) && (
+              <div role="alert" className="mb-6 flex flex-wrap items-start gap-3 rounded-[14px] border border-red-2/40 bg-red/20 p-4 text-[13.5px]">
+                <ShieldAlert size={20} className="mt-0.5 shrink-0 text-red-2" />
+                <div className="min-w-0 flex-1">
+                  <div className="display text-[16px] text-red-2">{!s.integrity.links.ok ? "The record's chain structure is inconsistent" : "The record changed since this browser last saw it"}</div>
+                  <p className="mt-1 text-ink-2">{!s.integrity.links.ok ? `${s.integrity.links.problems[0].reason} (entry ${s.integrity.links.problems[0].seq}).` : s.integrity.anchor.state === "changed" ? s.integrity.anchor.reason : ""} If the operator reset or restored the log on purpose, accept the new record. Otherwise treat the record as untrustworthy.</p>
+                </div>
+                <div className="flex gap-2">
+                  <Link to="/app/audit" className="b-btn h-9 px-3 text-[13px]">Open the audit chain</Link>
+                  {s.integrity.anchor.state === "changed" && <button onClick={s.acceptRecord} className="b-btn primary h-9 px-3 text-[13px]">Accept the new record</button>}
+                </div>
+              </div>
+            )}
             {gate === "ready" ? <Outlet /> : <BrokerGate state={gate} onRetry={s.recheckHealth} error={s.error} url={getBrokerUrl()} />}
           </main>
         </div>

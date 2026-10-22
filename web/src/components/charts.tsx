@@ -47,7 +47,7 @@ export function VerdictStrip({ verdicts, size = 14, gap = 4, className }: { verd
 }
 
 /* ---------- Trend: stepped bars, black outlines ---------- */
-export function TrendArea({ points, height = 140, className, labels }: { points: number[]; height?: number; className?: string; labels?: string[] }) {
+export function TrendArea({ points, height = 140, className, labels, subLabels, caption }: { points: number[]; height?: number; className?: string; labels?: string[]; subLabels?: string[]; caption?: string }) {
   if (points.length === 0) return <div className="text-[13px] text-muted">No data.</div>;
   return (
     <div className={cx("", className)}>
@@ -59,7 +59,8 @@ export function TrendArea({ points, height = 140, className, labels }: { points:
           </div>
         ))}
       </div>
-      {labels && <div className="mt-2 flex gap-3">{labels.map((l, i) => <span key={i} className="label flex-1 text-center text-muted">{l}</span>)}</div>}
+      {labels && <div className="mt-2 flex gap-3">{labels.map((l, i) => <span key={i} className="label flex-1 text-center text-muted"><span className="block text-ink-2">{l}</span>{subLabels?.[i] && <span className="block text-[11px] font-normal">{subLabels[i]}</span>}</span>)}</div>}
+      {caption && <p className="mt-3 text-[12px] text-muted">{caption}</p>}
     </div>
   );
 }

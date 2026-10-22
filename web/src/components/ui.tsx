@@ -1,4 +1,5 @@
-import type { ReactNode, ButtonHTMLAttributes, HTMLAttributes, CSSProperties } from "react";
+import { useState, type ReactNode, type ButtonHTMLAttributes, type HTMLAttributes, type CSSProperties } from "react";
+import { Copy, Check } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Verdict } from "@/lib/api";
 
@@ -81,9 +82,23 @@ export function Empty({ title, desc, action }: { icon?: ReactNode; title: string
   );
 }
 
-export function Hash({ value, n = 6, className }: { value: string; n?: number; className?: string }) {
+export function Hash({ value, n = 6, className, copy = false }: { value: string; n?: number; className?: string; copy?: boolean }) {
+  const [done, setDone] = useState(false);
   const short = value.length > n * 2 ? `${value.slice(0, n)}…${value.slice(-4)}` : value;
-  return <code title={value} className={cx("mono text-[12px] font-bold", className)}>{short}</code>;
+  const code = <code title={value} className={cx("mono text-[12px] font-bold", className)}>{short}</code>;
+  if (!copy) return code;
+  async function doCopy() {
+    try { await navigator.clipboard.writeText(value); setDone(true); setTimeout(() => setDone(false), 1400); }
+    catch { /* clipboard unavailable; the full value is in the tooltip */ }
+  }
+  return (
+    <span className="inline-flex items-center gap-1">
+      {code}
+      <button type="button" onClick={doCopy} aria-label={done ? "Copied" : `Copy the full hash ${short}`} title={done ? "Copied" : "Copy the full hash"} className="rounded p-0.5 text-muted hover:text-ink">
+        {done ? <Check size={12} className="text-green-2" /> : <Copy size={12} />}
+      </button>
+    </span>
+  );
 }
 
 /* kept for API compatibility; the brutal system has no glows */

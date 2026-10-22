@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { X, CheckCircle2, XCircle, Loader2, Eye, EyeOff } from "lucide-react";
 import { useStore } from "@/lib/store";
+import { useDialog } from "@/lib/useDialog";
 import { DEFAULT_BROKER_URL, getBrokerUrl, setBrokerUrl, getHealth } from "@/lib/api";
 import { Button, cx } from "./ui";
 
@@ -15,7 +16,7 @@ export function ConnectDialog({ onClose }: { onClose: () => void }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [probe, setProbe] = useState<Probe>({ state: "idle" });
-  useEffect(() => { const k = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); }; window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k); }, [onClose]);
+  const dialogRef = useDialog(onClose);
 
   useEffect(() => {
     let alive = true;
@@ -43,7 +44,7 @@ export function ConnectDialog({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="modal-backdrop absolute inset-0" onClick={onClose} />
-      <form onSubmit={submit} role="dialog" aria-modal="true" aria-label="Operator login" className="modal-surface b-card relative w-full max-w-lg rounded-[18px] p-6 rise">
+      <form ref={dialogRef as unknown as React.RefObject<HTMLFormElement>} onSubmit={submit} role="dialog" aria-modal="true" aria-label="Operator login" className="modal-surface b-card relative w-full max-w-lg rounded-[18px] p-6 rise">
         <div className="flex items-start justify-between">
           <h2 className="display text-[24px]">Operator login</h2>
           <button type="button" onClick={onClose} aria-label="Close" className="border border-line bg-card p-1"><X size={16} strokeWidth={2.5} /></button>

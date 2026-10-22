@@ -56,11 +56,11 @@ export function Overview() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Tile tone="violet" className="p-5"><div className="label">Model under test</div><div className="mono mt-2 break-all text-[20px] font-bold">{s.mockMode ? "mock" : s.modelName ?? "…"}</div><p className="mt-2 text-[12.5px] text-muted">Every reply records which model answered.</p></Tile>
         <Tile tone="blue" className="p-5"><div className="label">Blind judge</div><div className="mono mt-2 break-all text-[20px] font-bold">{s.judgeModel ?? "…"}</div><p className="mt-2 text-[12.5px] text-muted">Sees only the reply, never the prompt.</p></Tile>
-        <Tile tone={stats.judged === 0 ? "ink" : stats.catchRate >= 70 ? "green" : stats.catchRate >= 40 ? "amber" : "red"} className="p-5"><div className="label">Blocked across all runs</div><div className={cx("display mt-2 text-[34px]", stats.judged > 0 && stats.catchRate < 40 && "text-red-2")}>{stats.judged ? `${stats.catchRate}%` : "–"}</div><p className="mt-2 text-[12.5px] text-muted">{stats.blocked} blocked, {stats.passed} through, {stats.ambiguous} unsure of {stats.judged} judged.</p></Tile>
+        <Tile tone={stats.judged === 0 ? "ink" : stats.catchRate >= 70 ? "green" : stats.catchRate >= 40 ? "amber" : "red"} className="p-5"><div className="label">Blocked across all runs</div><div className={cx("display mt-2 text-[34px]", stats.judged > 0 && stats.catchRate < 40 && "text-red-2")}>{stats.judged ? `${stats.catchRate}%` : "–"}</div><p className="mt-2 text-[12.5px] text-muted">{stats.blocked} blocked, {stats.passed} got through, {stats.ambiguous} unsure, out of {stats.judged} judged attacks.</p>{stats.judged > 0 && <p className="mt-1 text-[12.5px] font-semibold text-ink-2">Attack success rate {Math.round((stats.passed / stats.judged) * 100)}% ({stats.passed} of {stats.judged}). Blocked, got through and unsure add up to 100%.</p>}</Tile>
         <Tile tone={verify && !verify.ok ? "red" : verify?.ok ? "green" : "ink"} className="p-5">
           <div className="label">Record</div>
           <div className="display mt-2 text-[34px]">{verify == null ? s.entries.length : verify.ok ? "Intact" : "Broken"}</div>
-          <p className="mt-2 text-[12.5px] text-muted">{verify == null ? "hash-chained entries · not yet verified" : verify.ok ? `All ${verify.count} entries match.` : `Entry ${verify.brokenAtSeq}: ${verify.reason}.`}</p>
+          <p className="mt-2 text-[12.5px] text-muted">{verify == null ? (s.integrity.links.ok ? "entries. Links checked in your browser: consistent. Keyed verification not run yet." : "entries. The chain structure looks inconsistent. Open the audit chain.") : verify.ok ? `All ${verify.count} entries match.` : `Entry ${verify.brokenAtSeq}: ${verify.reason}.`}</p>
           <div className="mt-2 flex gap-3"><button onClick={doVerify} disabled={verifying} className="label inline-flex items-center gap-1.5 text-ink underline decoration-2 underline-offset-4 disabled:opacity-50">{verify && !verify.ok ? <ShieldAlert size={14} /> : <ShieldCheck size={14} />}{verifying ? "Checking…" : "Verify now"}</button><Link to="/app/audit" className="label underline decoration-2 underline-offset-4">Open the chain</Link></div>
         </Tile>
       </div>
@@ -114,7 +114,7 @@ export function Overview() {
       {/* Trends, only when there is a trend */}
       {runs.length >= 2 ? (
         <div className="grid gap-6 lg:grid-cols-2">
-          <Card className="p-5"><Heading title="Blocked rate by run" desc="Is the model getting safer, or worse?" /><TrendArea points={trend.map((r) => r.catchRate)} labels={trend.map((r) => `R${r.index}`)} height={150} /></Card>
+          <Card className="p-5"><Heading title="Blocked rate by run" desc="Is the model getting safer, or worse?" /><TrendArea points={trend.map((r) => r.catchRate)} labels={trend.map((r) => `R${r.index}`)} subLabels={trend.map((r) => `${r.blocked + r.passed + r.ambiguous} judged`)} caption="Share of judged attacks the model blocked in each run. A run with fewer attacks is a weaker signal." height={150} /></Card>
           <Card className="p-5">
             <Heading title="Weakest techniques" desc="Share of attacks blocked, per technique." />
             <div className="space-y-3">

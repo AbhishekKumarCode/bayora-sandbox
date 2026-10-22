@@ -48,12 +48,18 @@ export function Compare() {
             {chosen.map((m) => <ModelTile key={m.model} m={m} now={now} />)}
           </div>
 
+          {new Set(chosen.map((m) => m.attacks)).size > 1 && (
+            <div role="note" className="rounded-[12px] border border-line bg-amber/30 px-4 py-3 text-[13px] font-semibold text-ink-2">
+              Different sample sizes: {chosen.map((m) => `${m.model} was tested with ${m.attacks} attacks`).join(", ")}. Percentages are comparable, but a model with fewer attacks is a weaker signal.
+            </div>
+          )}
+
           {/* technique matrix */}
           <Card className="p-5">
             <Heading title="Where they differ" desc="One row per technique. A red cell means at least one attack of that technique got through on that model." right={<Legend items={[{ color: VERDICT_COLOR.blocked, label: "Blocked" }, { color: VERDICT_COLOR.ambiguous, label: "Unsure" }, { color: VERDICT_COLOR.passed_through, label: "Got through" }]} />} />
             <div className="overflow-x-auto">
               <table className="w-full text-[13px]">
-                <thead><tr><th className="b-th py-2 pr-4 text-left">Technique</th>{chosen.map((m) => <th key={m.model} className="b-th mono px-3 py-2 text-left">{m.model}</th>)}</tr></thead>
+                <thead><tr><th className="b-th py-2 pr-4 text-left">Technique</th>{chosen.map((m) => <th key={m.model} className="b-th px-3 py-2 text-left"><span className="mono block">{m.model}</span><span className="block text-[11px] font-normal">blocked / fired · {m.attacks} attacks</span></th>)}</tr></thead>
                 <tbody>
                   {techniques.map((t) => (
                     <tr key={t} className="b-row">

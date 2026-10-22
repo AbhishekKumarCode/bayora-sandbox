@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ForbiddenError, VIEWER_TOKEN, clearToken, getAudit, getConfig, getHealth, getStoredToken, healStaleBrokerUrl, storeToken, triggerRun as apiTriggerRun, triggerCompare as apiTriggerCompare, verifyChain as apiVerify, type AuditEntry, type VerifyResult } from "./api";
+import { ForbiddenError, VIEWER_TOKEN, getBrokerUrl, clearToken, getAudit, getConfig, getHealth, getStoredToken, healStaleBrokerUrl, storeToken, triggerRun as apiTriggerRun, triggerCompare as apiTriggerCompare, verifyChain as apiVerify, type AuditEntry, type VerifyResult } from "./api";
+import { checkLinks, checkAnchor, loadAnchor, saveAnchor, type Anchor, type AnchorStatus, type LinkCheck } from "./integrity";
 
 export type Source = "demo" | "broker";
 
@@ -7,6 +8,8 @@ export type Role = "operator" | "viewer";
 type Store = {
   source: Source;
   role: Role;                  // operator = audit token entered; viewer = baked public token
+  integrity: { links: LinkCheck; anchor: AnchorStatus };  // checks done in this browser, without the broker's key
+  acceptRecord: () => void;    // accept the current record as the new reference point
   canRun: boolean;             // may start a run (operators always; visitors when the broker allows it)
   connected: boolean;          // broker + token working
   brokerOnline: boolean | null; // health probe
@@ -40,6 +43,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [modelName, setModelName] = useState<string | null>(null);
   const [secretMarkers, setSecretMarkers] = useState<string[]>([]);
   const [viewerCanRun, setViewerCanRun] = useState(false);
+  const [anchor, setAnchor] = useState<Anchor | null>(() => loadAnchor(getBrokerUrl()));
   const [connected, setConnected] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -169,6 +173,27 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return r.status;
   }, [guard, role]);
 
+  // Integrity checks that need no key: structure of the chain, and whether the
+  // latest entry this browser saw last time is still there, unchanged.
+  const links = useMemo(() => checkLinks(entries), [entries]);
+  const anchorStatus = useMemo(() => checkAnchor(entries, anchor), [entries, anchor]);
+  useEffect(() => {
+    if (source !== "broker" || lastPollAt === 0 || entries.length === 0) return;
+    if (anchorStatus.state === "changed" || !links.ok) return; // never overwrite the reference with a suspicious record
+    const last = entries[entries.length - 1];
+    if (!anchor || anchor.seq !== last.seq || anchor.hash !== last.hash) {
+      const a = { seq: last.seq, hash: last.hash, at: Date.now() };
+      saveAnchor(getBrokerUrl(), a); setAnchor(a);
+    }
+  }, [entries, source, lastPollAt, anchorStatus.state, links.ok, anchor]);
+  const acceptRecord = useCallback(() => {
+    const last = entries[entries.length - 1];
+    if (!last) { try { localStorage.removeItem(`bayora_anchor:${getBrokerUrl()}`); } catch { /* ignore */ } setAnchor(null); return; }
+    const a = { seq: last.seq, hash: last.hash, at: Date.now() };
+    saveAnchor(getBrokerUrl(), a); setAnchor(a);
+  }, [entries]);
+  const integrity = useMemo(() => ({ links, anchor: anchorStatus }), [links, anchorStatus]);
+
   const judgeModel = useMemo(() => {
     // The last verdict that was produced by an LLM judge names the judge; a single
     // keyword-fallback verdict must not make the header flicker.
@@ -184,9 +209,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [entries]);
 
   const value = useMemo<Store>(() => ({
-    source, role, canRun, connected, brokerOnline, mockMode, modelName, judgeModel, secretMarkers, entries, loading, error, lastPollAt,
+    source, role, canRun, integrity, acceptRecord, connected, brokerOnline, mockMode, modelName, judgeModel, secretMarkers, entries, loading, error, lastPollAt,
     connect, disconnect, useDemo, verify, triggerRun, triggerCompare, recheckHealth,
-  }), [source, role, canRun, connected, brokerOnline, mockMode, modelName, judgeModel, secretMarkers, entries, loading, error, lastPollAt, connect, disconnect, useDemo, verify, triggerRun, triggerCompare, recheckHealth]);
+  }), [source, role, canRun, integrity, acceptRecord, connected, brokerOnline, mockMode, modelName, judgeModel, secretMarkers, entries, loading, error, lastPollAt, connect, disconnect, useDemo, verify, triggerRun, triggerCompare, recheckHealth]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
