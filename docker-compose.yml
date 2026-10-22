@@ -40,6 +40,7 @@ services:
   red-team:
     build: ./services/red-team
     container_name: bayora-red-team
+    restart: unless-stopped
     environment:
       - BROKER_URL=http://broker:4000
       - RED_TEAM_TOKEN=${RED_TEAM_TOKEN:?set RED_TEAM_TOKEN in .env} # this container never sees BLUE_TEAM_TOKEN or AUDIT_TOKEN
@@ -56,6 +57,7 @@ services:
   blue-team:
     build: ./services/blue-team
     container_name: bayora-blue-team
+    restart: unless-stopped
     environment:
       - BROKER_URL=http://broker:4000
       - BLUE_TEAM_TOKEN=${BLUE_TEAM_TOKEN:?set BLUE_TEAM_TOKEN in .env} # this container never sees RED_TEAM_TOKEN or AUDIT_TOKEN

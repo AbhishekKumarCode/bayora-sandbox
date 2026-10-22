@@ -51,15 +51,15 @@ export function TrendArea({ points, height = 140, className, labels, subLabels, 
   if (points.length === 0) return <div className="text-[13px] text-muted">No data.</div>;
   return (
     <div className={cx("", className)}>
-      <div className="flex items-end gap-3 border-b border-line" style={{ height }}>
+      <div className="flex items-end gap-1 border-b border-line sm:gap-3" style={{ height }}>
         {points.map((p, i) => (
-          <div key={i} className="group relative flex flex-1 flex-col items-center justify-end self-stretch">
-            <span className="label mb-1 text-ink">{p}%</span>
+          <div key={i} className="group relative flex min-w-0 flex-1 flex-col items-center justify-end self-stretch">
+            <span className="label mb-1 text-[10px] text-ink sm:text-[12px]">{p}%</span>
             <div className="w-full rounded-t-[8px]" style={{ height: `${Math.max(4, p)}%`, background: p >= 70 ? VERDICT_COLOR.blocked : p >= 40 ? VERDICT_COLOR.ambiguous : VERDICT_COLOR.passed_through }} />
           </div>
         ))}
       </div>
-      {labels && <div className="mt-2 flex gap-3">{labels.map((l, i) => <span key={i} className="label flex-1 text-center text-muted"><span className="block text-ink-2">{l}</span>{subLabels?.[i] && <span className="block text-[11px] font-normal">{subLabels[i]}</span>}</span>)}</div>}
+      {labels && <div className="mt-2 flex gap-1 sm:gap-3">{labels.map((l, i) => <span key={i} className="label min-w-0 flex-1 text-center text-[10px] text-muted sm:text-[12px]"><span className="block truncate text-ink-2"><span className="sm:hidden">{l.replace(/^Run\s*/, "")}</span><span className="hidden sm:inline">{l}</span></span>{subLabels?.[i] && <span className="hidden text-[11px] font-normal sm:block">{subLabels[i]}</span>}</span>)}</div>}
       {caption && <p className="mt-3 text-[12px] text-muted">{caption}</p>}
     </div>
   );

@@ -160,8 +160,8 @@ exactly where the chain breaks.
 docker-compose.yml       # defines the 2 isolated networks + 3 services + per-role secrets
 services/
   broker/                 # mediates red<->LLM<->blue, owns the audit log, enforces per-role auth
-  red-team/                # fires hardcoded attack payloads (RED_TEAM_TOKEN only)
-  blue-team/               # blind heuristic classifier (BLUE_TEAM_TOKEN only)
+  red-team/                # fires the 7 attack payloads; starts a run when asked (RED_TEAM_TOKEN only)
+  blue-team/               # blind judge: its own LLM, keyword fallback (BLUE_TEAM_TOKEN only)
 web/
   src/                      # the live React dashboard (see "Live dashboard" above)
 scripts/
