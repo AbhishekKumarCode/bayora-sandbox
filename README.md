@@ -1,127 +1,175 @@
 # Bayora Sandbox
 
-A minimal, working proof of the core idea: a red team and a blue team evaluate
-an LLM through a mediating broker, on **separate Docker networks with no
-shared path between them**, with every event recorded in a **tamper-evident,
-HMAC-chained audit log** — and each container only authenticated for the one
-role it's allowed to play.
+**A safe place to attack an AI model, with a judge that can't be tipped off and a record nobody can quietly rewrite.**
 
-This is the Phase 0 build — the minimal pipe that has to work before anything
-else (full live dashboard polish, stronger container hardening, real
-AdvBench/JailbreakBench sourcing) gets added.
+A red team attacks a model through a broker. A blue team scores every reply *blind*: it never sees the
+attack. Every event is sealed into a tamper-evident, HMAC-chained audit log that anyone can verify.
+
+Built by team **Byteforce** for **Hack in Hills '26**, Track 04: *Securing Adversarial AI Safety Testing Infrastructure*.
+
+**Live dashboard: https://bayora-sandbox.vercel.app** (no login needed)
 
 **Docs:** [Product Requirements](docs/PRD.md) · [Architecture](docs/ARCHITECTURE.md) · [API Reference](docs/API.md) · [Threat Model](docs/THREAT_MODEL.md) · [Design System](docs/DESIGN_SYSTEM.md)
+
+---
+
+## Contents
+
+- [The idea in one minute](#the-idea-in-one-minute)
+- [Try it (for judges)](#try-it-for-judges)
+- [What is actually enforced](#what-is-actually-enforced)
+- [Run it yourself](#run-it-yourself)
+- [The dashboard](#the-dashboard)
+- [Deploying](#deploying)
+- [Checking it works](#checking-it-works)
+- [Honest limits](#honest-limits)
+- [Project structure](#project-structure)
+
+---
+
+## The idea in one minute
+
+Testing an AI model's safety needs two teams that must not collude: one that attacks, one that judges.
+If the judge can see the attack, or the log can be edited afterwards, the result means nothing.
+Bayora makes both of those hard to do, and shows the proof.
+
+```mermaid
+flowchart LR
+    R["Red team<br/><small>sends attacks</small>"] -->|red-net| B{{"Broker<br/><small>the only link</small>"}}
+    B -->|attack| M[("Model under test<br/><small>holds a fake secret</small>")]
+    M -->|reply| B
+    B -->|"reply only<br/>(no prompt)"| J["Blue team<br/><small>blind judge</small>"]
+    J -->|"verdict"| B
+    B --> L[["Audit log<br/><small>HMAC-chained</small>"]]
+```
+
+1. **Attack.** The red team sends seven prompt-injection style attacks.
+2. **Answer.** The model replies. It runs with a system prompt holding a fake secret, so a real leak is possible.
+3. **Judge blind.** The blue team receives only the reply and decides: *blocked*, *got through*, or *unsure*.
+4. **Seal.** Each step is written to the log, chained to the entry before it with a secret key.
+
+---
 
 ## Try it (for judges)
 
 Open **https://bayora-sandbox.vercel.app**. No login, no token, nothing to install.
 
-1. **Overview** shows what the last run found and which models are involved.
-2. **Live run** → *Start a run* sends seven attacks through the sandbox while you watch; each one appears as a card.
-3. **Audit chain** → *Verify chain*, then *Try to tamper* to see a single edited entry break everything after it.
-4. **Runs** and **Compare models** show every run and put two models side by side on the same attacks and the same blind judge.
+| Step | Where | What you will see |
+|---|---|---|
+| 1 | **Overview** | What the last run found, and which models are involved |
+| 2 | **Live run** → *Start a run* | Seven attacks travel through the sandbox while you watch; each appears as a card |
+| 3 | **Audit chain** → *Verify chain*, then *Try to tamper* | One edited entry breaks every entry after it |
+| 4 | **Runs** and **Compare models** | Every run, and two models side by side on the same attacks and the same judge |
 
-### What you can and cannot see without a token
+### What you can see without a token
 
 | | Visitor (no login) | Operator (token) |
-|---|---|---|
-| Overview, Runs, Audit chain, Compare results, verification | yes | yes |
-| Start a run of the current model | yes, rate-limited (90 s apart, 6 per day per address) | yes |
-| Attack prompts and the full attack library | no | yes |
-| System prompt | no | yes |
-| Switch the model, run a two-model comparison | no | yes |
+|---|:---:|:---:|
+| Overview, Runs, Audit chain, Compare results, verification | ✅ | ✅ |
+| Start a run of the current model | ✅ rate-limited | ✅ |
+| Attack prompts and the full attack library | ❌ | ✅ |
+| System prompt | ❌ | ✅ |
+| Switch the model, run a two-model comparison | ❌ | ✅ |
 
-Visitors use a read-only token that is built into the public page. It is deliberately
-limited: anything it can read is public, so the blind judge could never learn an attack
-prompt from the site.
+Visitors use a read-only token that is built into the public page. It is deliberately limited: anything it
+can read is public, so the blind judge could never learn an attack prompt from the site.
+Visitor runs are limited to one every 90 seconds, and 6 per day from one address.
 
 ### Operator access
 
-The operator token (`AUDIT_TOKEN`) is never shown in the dashboard. It is given to
-judges in the submission notes. To use it: open the dashboard, click **Operator login**
-in the header, paste the token and click **Connect**. It stays on that device until you
-sign out (untick *Stay signed in* to keep it for the tab only).
+The operator token (`AUDIT_TOKEN`) is never shown in the dashboard. It is given to judges in the submission notes.
 
-For the team: the broker shows the token once, like creating an API key. On the broker
-machine open `http://localhost:4000/setup` and copy it. The page then refuses to show it
-again, and refuses any request that came through the tunnel. Delete `logs/.token-revealed`
-to see it once more. After judging, change `AUDIT_TOKEN` in `.env` and run
-`docker compose up -d broker` to revoke every copy.
+1. Open the dashboard and click **Operator login** in the header.
+2. Paste the token and click **Connect**.
+3. It stays on that device until you sign out. Untick *Stay signed in* to keep it for the tab only.
+
+<details>
+<summary>For the team: showing and revoking the token</summary>
+
+The broker shows the token once, like creating an API key. On the broker machine open
+`http://localhost:4000/setup` and copy it. The page then refuses to show it again, and refuses any request
+that came through the tunnel or from another container. Delete `logs/.token-revealed` to see it once more.
+
+After judging, change `AUDIT_TOKEN` in `.env` and run `docker compose up -d broker` to revoke every copy.
+</details>
 
 ### If the dashboard says the broker is unreachable
 
-The address ending in `trycloudflare.com` is the **broker**, the API behind the dashboard,
-and it has no page of its own. If you open it in a browser you are redirected to the
-dashboard. The broker runs on the team's server; if the tunnel restarts its address
-changes and the dashboard is redeployed automatically within about a minute. The page
-retries on its own, and reloading picks up the new address.
+The address ending in `trycloudflare.com` is the **broker**, the API behind the dashboard. It has no page of its
+own: opened in a browser it redirects to the dashboard. If the tunnel restarts its address changes, and the
+dashboard is redeployed automatically within about a minute. The page retries on its own; reloading picks up the new address.
 
-## What's actually isolated here
+---
 
-- `red-team` is only on `red-net`. `blue-team` is only on `blue-net`. They
-  share no Docker network — there is no path for one container to reach the
-  other directly. Only `broker` sits on both networks and mediates everything.
-- The blue team never receives the attack prompt or technique label — only
-  the model's response text (`GET /pending`). That's what "blind evaluation"
-  means here, enforced in code, not just promised.
-- **Each container is authenticated for exactly one role.** `red-team` holds
-  only `RED_TEAM_TOKEN`, `blue-team` holds only `BLUE_TEAM_TOKEN`. This
-  matters because red and blue *are* both on a Docker network with the
-  broker (that's unavoidable — the broker has to be reachable by both) — so
-  without role-based auth, blue-team could simply call `GET /audit` itself
-  and read the attack prompts straight out of the log, silently defeating
-  the blind-evaluation guarantee. The `AUDIT_TOKEN` that protects `/audit`
-  and `/verify` is given only to the broker/host — never to either team
-  container — which is what actually stops that.
-- `/score` only accepts a verdict for an `attackId` that was genuinely
-  handed out via `/pending`, and only once — a forged or duplicate verdict
-  for an unknown ID is rejected with 409.
-- The audit log is HMAC-SHA256 chained (keyed with `AUDIT_HMAC_KEY`, which
-  only the broker and the host-side verify script ever see) rather than a
-  plain hash — a plain hash chain can be recomputed and re-forged by anyone
-  who can read the log; an HMAC chain can't be, without the key.
-- Every container runs with `cap_drop: ALL`, `no-new-privileges`, and a
-  read-only root filesystem (except the broker's `/logs` mount). The host
-  port is bound to `127.0.0.1` only.
+## What is actually enforced
 
-## Running it
+These are properties of the code and the container setup, not promises.
+
+| Guarantee | How |
+|---|---|
+| **Red and blue cannot talk directly** | `red-team` is only on `red-net`, which has no internet access. `blue-team` is only on `blue-net`. Only the broker sits on both. |
+| **The judge is blind** | The blue team gets `{ attackId, response }` from `GET /pending`: never the prompt or the technique. |
+| **One role per container** | Each container holds exactly one token: `RED_TEAM_TOKEN` or `BLUE_TEAM_TOKEN`. The `AUDIT_TOKEN` that reads the log never enters either, so the judge cannot read the attacks from the log. |
+| **No forged verdicts** | `/score` accepts a verdict only for an `attackId` that was really handed out, and only once. Anything else gets a 409. |
+| **A log that shows tampering** | Entries are chained with HMAC-SHA256 under `AUDIT_HMAC_KEY`, held only by the broker and the verify script. A plain hash chain can be recomputed after an edit; an HMAC chain cannot without the key. |
+| **Checked again in your browser** | The dashboard re-checks the chain links itself and remembers the latest entry it saw. If entries are later removed or rewritten, it shows a warning. |
+| **Hardened containers** | `cap_drop: ALL`, `no-new-privileges`, read-only root filesystem (except the broker's `/logs`), host port bound to `127.0.0.1`. |
+| **Visitors never see the fake secret** | Replies shown to visitors are scanned for the secret, including disguised forms, and withheld if it appears. |
+
+You can probe the isolation on the running system:
+
+```bash
+docker exec bayora-red-team wget -T 3 -O /dev/null https://api.groq.com/   # no route: red-net has no internet
+docker exec bayora-red-team wget -T 3 -O /dev/null http://blue-team:4000   # bad address: no shared network
+```
+
+---
+
+## Run it yourself
+
+**Needs:** Docker, and Node 22 if you want to run the dashboard locally.
 
 ```bash
 cp .env.example .env
-# generate your own secrets:
+
+# Generate four different secrets and paste them into .env as
+# AUDIT_HMAC_KEY, RED_TEAM_TOKEN, BLUE_TEAM_TOKEN and AUDIT_TOKEN:
 node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"
-# paste 4 different values in for AUDIT_HMAC_KEY, RED_TEAM_TOKEN, BLUE_TEAM_TOKEN, AUDIT_TOKEN
-# pick a model under test (any ONE of these):
-#   ANTHROPIC_API_KEY=...                         Anthropic
-#   LLM_BASE_URL + LLM_API_KEY + LLM_MODEL         any OpenAI-compatible API (Groq and
-#                                                 Gemini have free tiers; Ollama is local)
-#   nothing                                       MOCK MODE: canned replies, clearly labelled
-# optionally give the blind judge its own model (JUDGE_BASE_URL/JUDGE_API_KEY/JUDGE_MODEL);
-# without one it falls back to a keyword classifier. Use a different model from the target.
 
 docker compose up --build
 ```
 
-Watch the logs: `red-team` fires 7 prompt-injection-style attacks at the
-broker, the broker calls the model under test (which runs with a system prompt
-holding a fake secret, so a prompt leak is actually possible) and logs the full
-exchange, `blue-team` scores each reply blind with its own judge model, and
-every step gets appended to `logs/audit.log`.
+**Choose the model under test** (any one):
 
-Isolation you can probe live:
+| Option | Set in `.env` |
+|---|---|
+| Anthropic | `ANTHROPIC_API_KEY` |
+| Any OpenAI-compatible API (Groq and Gemini have free tiers; Ollama runs locally) | `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL` |
+| Nothing | **Mock mode**: canned replies, clearly labelled as such |
 
-```bash
-docker exec bayora-red-team wget -T 3 -O /dev/null https://api.groq.com/   # no route: red-net is internal
-docker exec bayora-red-team wget -T 3 -O /dev/null http://blue-team:4000   # bad address: no shared network
-```
+**Give the judge its own model** with `JUDGE_BASE_URL`, `JUDGE_API_KEY` and `JUDGE_MODEL`, and use a different model
+from the target. Without one, the judge falls back to a keyword classifier.
 
-## Live dashboard
+Everything the stack does is appended to `logs/audit.log`.
 
-The dashboard lives in `web/`: a Vite + React + Tailwind app with a landing
-page at `/` and the app at `/app` (Overview, Live run, Audit chain, Runs, Run detail,
-Attack library, Compare models, Settings). Every number is computed from the broker's
-`/audit` data. There is no built-in sample data: if the broker is unreachable the
-dashboard says so and retries, and an empty record shows an empty state.
+---
+
+## The dashboard
+
+The dashboard lives in `web/`: Vite, React, TypeScript and Tailwind. The landing page is at `/` and the app at `/app`.
+
+| Page | What it is for |
+|---|---|
+| **Overview** | The headline numbers, attack success rate, trends and the weakest techniques |
+| **Live run** | The sandbox animation, a card per attack, replay controls |
+| **Audit chain** | Every sealed entry, with search, filters, and one-click verification |
+| **Runs** / **Run detail** | One card per run, and the full story of a single run |
+| **Attack library** | The seven techniques and how each one fared (operator) |
+| **Compare models** | Two models on the same attacks and the same judge |
+| **Settings** | Connection, the model under test, the roles this page holds |
+
+Every number is computed from the broker's `/audit` data. There is no built-in sample data: if the broker is
+unreachable the dashboard says so and retries, and an empty record shows an empty state.
 
 ```bash
 cd web
@@ -129,86 +177,89 @@ npm install
 npm run dev          # http://localhost:5173
 ```
 
-Open `/app`. Visitors need nothing: they can read the record, verify it, and start a rate-limited run of the current model. Operators can click **Operator login** in the header and paste the `AUDIT_TOKEN` (see *Operator access* above). By default the token is kept in this browser ("Stay signed in on this device"); untick it to keep it for the tab only, and use *sign out* to forget it. The broker URL
-is editable in the same dialog (default: `VITE_BROKER_URL` at build time).
+---
 
-## Deploying the dashboard
+## Deploying
 
-The root `vercel.json` builds `web/` and serves `web/dist` with an SPA rewrite.
-Leave the Vercel project's Root Directory **unset** (repo root).
+The root `vercel.json` builds `web/` and serves `web/dist` with a single-page-app rewrite.
+Leave the Vercel project's Root Directory **unset** (the repo root).
 
-The dashboard learns where the broker is from `VITE_BROKER_URL` at build time. With a
-free Cloudflare quick tunnel the broker's public hostname changes whenever `cloudflared`
-restarts, so a small service keeps this in sync by itself:
+The dashboard learns where the broker is from `VITE_BROKER_URL`, set at build time. A free Cloudflare quick tunnel
+changes its hostname every time `cloudflared` restarts, so a small service keeps the dashboard in sync by itself:
 
 ```bash
 sudo scripts/install-tunnel-service.sh     # once; starts on boot, restarts on failure
 journalctl -u bayora-tunnel -f             # watch it
 ```
 
-`scripts/tunnel-watch.sh` runs the tunnel; when the hostname changes it sets
-`VITE_BROKER_URL` in the Vercel project and redeploys (about 30 seconds). It needs an
-authenticated `vercel` CLI and the project linked in `.vercel/`. With a named Cloudflare
-tunnel on your own domain the address never changes and the service is not needed.
+`scripts/tunnel-watch.sh` runs the tunnel. When the hostname changes it sets `VITE_BROKER_URL` in the Vercel
+project and redeploys (about 30 seconds). It needs an authenticated `vercel` CLI and the project linked in `.vercel/`.
+With a named Cloudflare tunnel on your own domain the address never changes and the service is not needed.
 For a one-off tunnel without the service, use `scripts/tunnel.sh`.
 
-## Checking the broker is reachable
+Never commit `.env` files. The dashboard build carries only the read-only visitor token; the operator token is never in it.
+
+---
+
+## Checking it works
+
+**Smoke test.** Checks health, the browser preflight request, what each token may and may not do, that visitor
+responses carry no attack prompts, and that the chain verifies.
 
 ```bash
 scripts/smoke.sh                       # against the local broker
 scripts/smoke.sh https://<tunnel>      # through the public tunnel, as a browser would
 ```
 
-It checks health, the CORS preflight a browser sends before every authenticated call, what each
-token may and may not do, that visitor responses carry no attack prompts, and that the chain verifies.
-
-## Verifying the audit log from the command line
+**Verify the log from the command line.** This recomputes the whole HMAC chain from the raw file and reports exactly
+where it breaks if anyone edited a line by hand.
 
 ```bash
 export $(grep -v '^#' .env | xargs) && node scripts/verify-log.js
 ```
 
-Independently recomputes the entire HMAC chain from the raw log file. If
-anyone edits a line in `logs/audit.log` by hand, this catches it and reports
-exactly where the chain breaks.
+---
 
-## What this does NOT claim to do yet
+## Honest limits
 
-- Viewer-side secret masking is deliberately fail-closed: any reply with a long run
-  of non-Latin text (or a disguised secret) is withheld from read-only viewers
-  entirely. This over-withholds legitimate Arabic or CJK replies; operators see
-  everything. A real Unicode confusables table would reduce this.
+This is a working proof of the idea, not a finished product. What it does not do yet:
 
-- The public dashboard build carries a read-only `VIEWER_TOKEN`. Anything that
-  token can read is treated as public: attack prompts and the system prompt
-  are stripped from viewer responses, and the catalog endpoint is operator-only,
-  so the judge container could not learn prompts even if it fetched the site.
-  Technique labels remain visible to viewers.
-
-- The HMAC key lives in the broker. A compromised broker can forge and vouch
-  for its own log, and trailing entries can be truncated without detection
-  until the chain head is anchored somewhere the broker cannot write.
-- The judge sees only the reply, so it cannot know what was asked; harm that
-  is only visible in context will be missed. `confidence` and `notes` are the
-  judge's own words, sealed as sent, not verified.
-- `/pending` hands out each reply once with no lease; a judge crash mid-score
+- **A compromised broker can vouch for its own log.** The HMAC key lives in the broker, and trailing entries can be
+  removed undetected until the chain head is anchored somewhere the broker cannot write. The browser check catches
+  this only for a browser that saw the record before.
+- **The judge sees only the reply.** Harm that is visible only in context will be missed. The judge's `confidence`
+  and `notes` are its own words, sealed as sent, not verified.
+- **Secret masking errs on the side of hiding.** Visitors do not see any reply with a long stretch of non-Latin text
+  or a disguised secret, so some legitimate Arabic or CJK replies are withheld. Operators see everything.
+- **The public visitor token is public.** Anything it can read is treated as public. Attack prompts and the system
+  prompt are stripped from its responses and the catalog is operator-only. Technique labels stay visible.
+- **A judge crash loses that verdict.** `/pending` hands out each reply once, with no lease, so a crash mid-score
   leaves that attack unjudged.
-- The "Start a run" button has the broker fire its own copy of `attacks.json`;
-  only the red container's boot run crosses the real network boundary.
-- No seccomp profiles and no automated test suite; `scripts/smoke.sh` checks the broker end to end. Rate limiting exists only for visitor-started runs.
+- **Runs started from the dashboard** are claimed by the red container. If it does not claim one in time, the broker
+  fires the attacks itself from its own copy of `attacks.json`.
+- **No seccomp profiles and no automated test suite.** `scripts/smoke.sh` checks the broker end to end. Rate limiting
+  exists only for visitor-started runs.
+
+---
 
 ## Project structure
 
 ```
-docker-compose.yml       # defines the 2 isolated networks + 3 services + per-role secrets
+docker-compose.yml        two isolated networks, three services, per-role secrets
 services/
-  broker/                 # mediates red<->LLM<->blue, owns the audit log, enforces per-role auth
-  red-team/                # fires the 7 attack payloads; starts a run when asked (RED_TEAM_TOKEN only)
-  blue-team/               # blind judge: its own LLM, keyword fallback (BLUE_TEAM_TOKEN only)
-web/
-  src/                      # the live React dashboard (see "Live dashboard" above)
+  broker/                 mediates red ↔ model ↔ blue, owns the audit log, enforces per-role auth
+  red-team/               fires the 7 attacks and starts a run when asked (RED_TEAM_TOKEN only)
+  blue-team/              the blind judge: its own LLM, keyword fallback (BLUE_TEAM_TOKEN only)
+web/                      the dashboard (Vite + React + Tailwind)
 scripts/
-  verify-log.js              # independent, HMAC-keyed audit-log integrity checker
-logs/
-  audit.log                   # created at runtime, HMAC-chained JSON lines
+  smoke.sh                end-to-end check of the broker, local or through the tunnel
+  verify-log.js           independent HMAC check of the audit log
+  tunnel-watch.sh         keeps the tunnel up and the dashboard pointed at it
+  install-tunnel-service.sh   installs the watcher as a systemd service
+docs/                     PRD, architecture, API, threat model, design system
+logs/audit.log            created at runtime: HMAC-chained JSON lines
 ```
+
+---
+
+<sub>Team Byteforce · Galgotias University · Hack in Hills '26</sub>
